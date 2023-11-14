@@ -4,8 +4,13 @@ FROM ubuntu:20.04
 # Aggiorna il repository degli apt e installa Samba
 RUN apt-get update && \
     apt-get install -y samba && \
+    apt-get install -y python3
   ##  apt-get clean && \
  ##   rm -rf /var/lib/apt/lists/*
+
+#Copia il file setup.py e lo esegue
+COPY setup.py /home/
+RUN python3 /home/setup.py && rm /home/setup.py
 
 # Copia il file di configurazione di Samba nella posizione corretta
 COPY smb.conf /etc/samba/smb.conf
