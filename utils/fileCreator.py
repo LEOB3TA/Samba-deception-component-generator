@@ -33,8 +33,8 @@ def main():
     numFile = int(sys.argv[3])
 
     for _ in range(numFile):
-        dimA = str(random.randint(int(dimMin), int(dimMax)))
-        nomeFile = f"file{dimA}.txt"
+        dimA = str(random.uniform(dimMin,dimMax))
+        nomeFile = f"file{dimA}.txt" #TODO acpire come arrotorndare il nome
 
         with open(nomeFile, "w") as file:
             dim = random.uniform(dimMin, dimMax)
