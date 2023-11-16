@@ -18,6 +18,10 @@ The goal of this project is to create a fake resource generator for one specific
 <li>Controllare che il comando COPY effettivamente copi il nostro file desiderato</li>
 <li>Capire come generare i file e inserirli nel filesystem fake</li>
 <li>Controllare che le porte siano corrette</li>
+<li>inserire alcune catture alle eccezioni</li>
+<li>COntrollare i todo nello script</li>
+<li>È necesaria la funzione __main__ in python??</li>
+</ul>
 
 
 ## Come creare un immagine OCI
