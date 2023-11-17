@@ -26,7 +26,7 @@ def generate_random_sentence(num_words):
 
 def create_files(dim_min, dim_max, num_file):
     for _ in range(num_file):
-        dim_a = str(round(random.uniform(dim_min, dim_max), 1))
+        dim_a = str(round(random.uniform(dim_min, dim_max)))
         current_datetime = datetime.now()
         formatted_datetime = current_datetime.strftime("%Y%m%d")
         nome_file = f"{formatted_datetime}_{dim_a}MB.txt"
@@ -42,7 +42,7 @@ def create_files(dim_min, dim_max, num_file):
                 file.write(sentence)
 
 
-def main():
+if __name__ == '__main__':
     dim_min = 100
     dim_max = 200
     num_file = 1
