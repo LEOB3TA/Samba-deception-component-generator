@@ -4,8 +4,12 @@ FROM ubuntu:20.04
 # Aggiorna il repository degli apt e installa Samba
 RUN apt-get update && \
             apt-get install -y samba && \
-            apt-get install -y python3 \
-            apt-get install -y pandoc
+            apt-get install -y python3 && \
+            apt-get install pandoc && \
+            apt-get install texlive-latex-base && \
+            apt-get install texlive-fonts-recommended && \
+            apt-get install texlive-fonts-extra && \
+            apt-get install texlive-latex-extra
 ##  apt-get clean && \
 ##   rm -rf /var/lib/apt/lists/*
 
