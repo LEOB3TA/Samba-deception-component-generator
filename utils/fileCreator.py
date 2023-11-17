@@ -25,6 +25,7 @@ def generate_random_sentence(num_words):
 
 
 def create_files(dim_min, dim_max, num_file):
+    wordlist=('pwd','password','Password','myFile','my_file','note','file','File','secret')
     for _ in range(num_file):
         file_dim = random.uniform(dim_min, dim_max)
         file_dim_str = str(file_dim)
@@ -33,7 +34,8 @@ def create_files(dim_min, dim_max, num_file):
             file_round_dim_str = file_dim_str[:file_dim_str.find('.')]
         current_datetime = datetime.now()
         formatted_datetime = current_datetime.strftime("%Y%m%d_%S")
-        nome_file = f"{formatted_datetime}_{file_round_dim_str}MB.txt"
+        nome=random.choice(wordlist)
+        nome_file = f"{nome}_{formatted_datetime}_{file_round_dim_str}MB.txt"
         print(nome_file)
 
         with open(nome_file, "w") as file:
@@ -44,6 +46,7 @@ def create_files(dim_min, dim_max, num_file):
                 sentence = generate_random_sentence(num_words) + '\n'
                 file.write(sentence)
     return
+
 
 
 if __name__ == '__main__':
