@@ -26,16 +26,19 @@ def generate_random_sentence(num_words):
 
 def create_files(dim_min, dim_max, num_file):
     for _ in range(num_file):
-        dim_a = str(round(random.uniform(dim_min, dim_max)))
+        file_dim = random.uniform(dim_min, dim_max)
+        file_dim_str = str(file_dim)
+        file_round_dim_str = file_dim_str
+        if file_dim_str.find('.') != -1:
+            file_round_dim_str = file_dim_str[:file_dim_str.find('.')]
         current_datetime = datetime.now()
         formatted_datetime = current_datetime.strftime("%Y%m%d")
-        nome_file = f"{formatted_datetime}_{dim_a}MB.txt"
+        nome_file = f"{formatted_datetime}_{file_round_dim_str}MB.txt"
         print(nome_file)
 
         with open(nome_file, "w") as file:
-            dim = random.uniform(dim_min, dim_max)
             num_words = random.randint(5, 15)  # Random number of words per sentence
-            num_sentences = int((dim * 1000000) / (num_words * 5))  # Assuming average word length of 5 characters
+            num_sentences = int((file_dim * 1000000) / (num_words * 5))  # Assuming average word length of 5 characters
 
             for _ in range(num_sentences):
                 sentence = generate_random_sentence(num_words) + '\n'
