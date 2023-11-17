@@ -32,7 +32,7 @@ def create_files(dim_min, dim_max, num_file):
         if file_dim_str.find('.') != -1:
             file_round_dim_str = file_dim_str[:file_dim_str.find('.')]
         current_datetime = datetime.now()
-        formatted_datetime = current_datetime.strftime("%Y%m%d")
+        formatted_datetime = current_datetime.strftime("%Y%m%d_%S")
         nome_file = f"{formatted_datetime}_{file_round_dim_str}MB.txt"
         print(nome_file)
 

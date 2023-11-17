@@ -368,20 +368,6 @@ Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> bo
 while (True):  ##Ci piace??
     choice = int(input("""
 ----------------------------------------------------------------------------------
-Choose what type of file system do you prefer: 0 --> home, 1 --> work
-----------------------------------------------------------------------------------
-    """))
-    if choice == 0:
-        print("home")  # creare implementzioni corrette
-        break
-    elif choice == 1:
-        print("work")  # creare implementzioni corrette
-        break
-    else:
-        print("Invalid choice")
-while (True):  ##Ci piace??
-    choice = int(input("""
-----------------------------------------------------------------------------------
 Do you want LDAP authentication: 0 --> yes, 1 --> no
 ----------------------------------------------------------------------------------
     """))
