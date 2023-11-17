@@ -43,6 +43,7 @@ def create_files(dim_min, dim_max, num_file):
             for _ in range(num_sentences):
                 sentence = generate_random_sentence(num_words) + '\n'
                 file.write(sentence)
+    return
 
 
 if __name__ == '__main__':
