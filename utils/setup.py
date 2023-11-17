@@ -42,15 +42,16 @@ def authenticate(username, password):
 
 
 def create_files(dim_min, dim_max, num_file):
+    wordlist = ['pwd', 'password', 'Password', 'myFile', 'my_file', 'note', 'file', 'File', 'secret',
+                'document', 'confidential', 'private', 'backup', 'important', 'data', 'access', 'admin',
+                'login', 'username', 'security', 'top_secret', 'classified', 'sensitive', 'confidential_info',
+                'john', 'mary', 'bob', 'alice', 'steve', 'jane', 'mark', 'sara', 'david', 'emily','chiara']
     for _ in range(num_file):
         file_dim = random.uniform(dim_min, dim_max)
-        file_dim_str = str(file_dim)
-        file_round_dim_str = file_dim_str
-        if file_dim_str.find('.') != -1:
-            file_round_dim_str = file_dim_str[:file_dim_str.find('.')]
         current_datetime = datetime.now()
-        formatted_datetime = current_datetime.strftime("%Y%m%d_%S")
-        nome_file = f"{formatted_datetime}_{file_round_dim_str}MB.txt"
+        formatted_datetime = current_datetime.strftime("%Y%m%d")
+        nome=random.choice(wordlist)
+        nome_file = f"{nome}_{formatted_datetime}.txt"
         print(nome_file)
 
         with open(nome_file, "w") as file:
@@ -94,8 +95,8 @@ def makeFS():
         os.makedirs(folder_path)
         print(f"Folder '{folder_path}' created successfully.")
         os.chdir(folder_path)
-        create_files(0.001, 0.5, 20) #DON'T CHANGE THE DIMENSIONS
-        txt_files = [file for file in folder_path]
+        create_files(0.0001, 0.2, 20) #DON'T CHANGE THE DIMENSIONS
+        txt_files = [file for file in os.listdir(folder_path)]
         random_number = random.randint(0,len(txt_files))
         txt_files_word = txt_files[:random_number]
         txt_files_pdf = txt_files[random_number:]
@@ -109,6 +110,8 @@ def makeFS():
             output_file = os.path.splitext(input_file)[0] + ".pdf"
             convert_to_pdf(input_file, output_file)
             print(f"Convertito {input_file} in {output_file}")
+        for file in txt_files:
+            os.remove(file)
         os.chdir(base_path)
 
 

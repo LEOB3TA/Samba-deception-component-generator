@@ -14,11 +14,11 @@ The goal of this project is to create a fake resource generator for one specific
 <ul>
 <li>Scrivere nel smb.conf la configurazione desiderata</li>
 <li>Controllare che il comando COPY effettivamente copi il nostro file desiderato</li>
-<li>Capire come generare i file e inserirli nel filesystem fake</li>
 <li>Controllare che le porte siano corrette</li>
 <li>Inserire alcune catture alle eccezioni</li>
 <li>Controllare i todo nello script</li>
 <li>È necessaria la funzione __main__ in python??</li>
+<li>Una volta finito spostare setup.py dentro il file principale di python</li>
 </ul>
 
 
