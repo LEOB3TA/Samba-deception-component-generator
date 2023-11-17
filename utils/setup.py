@@ -70,11 +70,6 @@ def makeFS():
     # questp è stato messo qui per creare la cartella della base path perchèà deve esistere, non è detto che serva dipende da dove condivide samba
     # Specify the path for the new folder
     base_path = '/Users/leo/try/prova'
-
-    # Use the os.makedirs() function to create the folder along with any necessary parent folders
-    os.makedirs(base_path)
-
-    print(f"Folder '{base_path}' created successfully.")
     # TODO capire quel è la cartella dove samba condivide
 
     # Specify the user folders
@@ -84,12 +79,11 @@ def makeFS():
         os.makedirs(folder_path)
         print(f"Folder '{folder_path}' created successfully.")
         os.chdir(folder_path)
-        create_files(0.1, 10, 20)
-        txt_files = [file for file in folder_path if file.endswith(".txt")]
-        # Divide la lista di file a metà
-        half_count = len(txt_files) // 2
-        txt_files_word = txt_files[:half_count]
-        txt_files_pdf = txt_files[half_count:]
+        create_files(0.001, 0.5, 20) #DON'T CHANGE THE DIMENSIONS
+        txt_files = [file for file in folder_path]
+        random_number = random.randint(0,len(txt_files))
+        txt_files_word = txt_files[:random_number]
+        txt_files_pdf = txt_files[random_number:]
 
         for input_file in txt_files_word:
             output_file = os.path.splitext(input_file)[0] + ".docx"
