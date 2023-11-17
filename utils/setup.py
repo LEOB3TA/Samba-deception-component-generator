@@ -2,6 +2,7 @@ import subprocess
 import random
 import os
 from datetime import datetime
+import ldap
 
 
 def generate_random_sentence(num_words):
@@ -24,6 +25,20 @@ def generate_random_sentence(num_words):
     ]
     sentence = ' '.join(random.choice(words) + random.choice(['', ',', ';', ':']) for _ in range(num_words))
     return sentence.capitalize() + '.'
+
+
+def authenticate(username, password):
+    ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
+    server = "ldaps://ldap.example.com:636"
+    base_dn = "dc=example.com"
+    user_dn = "uid={},{}".format(username, base_dn)
+    try:
+        l = ldap.initialize(server)
+        l.protocol_version = ldap.VERSION3
+        
+        l.simple_bind_s(user_dn, password)
+    except subprocess.CalledProcessError as e:
+        print(f'Errore LDAP: {e}')
 
 
 def create_files(dim_min, dim_max, num_file):
