@@ -4,7 +4,8 @@ FROM ubuntu:20.04
 # Aggiorna il repository degli apt e installa Samba
 RUN apt-get update && \
             apt-get install -y samba && \
-                               apt-get install -y python3
+            apt-get install -y python3 \
+            apt-get install -y pandoc
 ##  apt-get clean && \
 ##   rm -rf /var/lib/apt/lists/*
 
@@ -21,7 +22,7 @@ EXPOSE 137/udp 138/udp 139 445
 # Avvia il servizio Samba quando il contenitore viene avviato
 CMD ["smbd", "--foreground", "--no-process-group"]"""
 
-base_smb_config_content="""#======================= Global Settings =======================
+base_smb_config_content = """#======================= Global Settings =======================
 
 [global]
 
@@ -184,10 +185,10 @@ base_smb_config_content="""#======================= Global Settings ============
 # create dirs. with group=rw permissions, set next parameter to 0775.
    directory mask = 0700
 
-# By default, \\server\username shares can be connected to by anyone
+# By default, \\server\\username shares can be connected to by anyone
 # with access to the samba server.
 # The following parameter makes sure that only "username" can connect
-# to \\server\username
+# to \\server\\username
 # This might need tweaking when using external authentication schemes
    valid users = %S
 
@@ -237,23 +238,65 @@ base_smb_config_content="""#======================= Global Settings ============
 ;   write l"""
 
 base_setup_content = """import subprocess
+import random
 
 def create_user(username, password):
     try:
         # Creare un nuovo utente
         subprocess.run(['sudo', 'useradd', '-m', '-p', password, username], check=True)
+        subprocess.run(['sudo', 'smbpasswd','-a', '-p', password, username], check=True)
         print(f'Utente "{username}" creato con successo.')
     except subprocess.CalledProcessError as e:
-       print(f'Errore durante la creazione dell\'utente: {e}')
+       print(f'Errore durante la creazione dell\\'utente: {e}')
+       
+def generate_random_sentence(num_words):
+    words = [
+        'apple', 'banana', 'orange', 'grape', 'kiwi', 'python', 'programming',
+        'random', 'file', 'dimension', 'dog', 'cat', 'house', 'car', 'beach',
+        'computer', 'cloud', 'flower', 'mountain', 'ocean', 'sun', 'moon',
+        'rainbow', 'coffee', 'book', 'music', 'dance', 'happy', 'friend',
+        'journey', 'adventure', 'love', 'peace', 'smile', 'laughter', 'family',
+        'holiday', 'vacation', 'explore', 'discover', 'treasure', 'magic',
+        'wonder', 'secret', 'fantasy', 'imagination', 'create', 'inspire',
+        'dream', 'believe', 'achieve', 'success', 'victory', 'celebrate',
+        'challenge', 'effort', 'energy', 'focus', 'persevere', 'progress',
+        'mindful', 'grateful', 'kindness', 'forgive', 'compassion', 'courage',
+        'strength', 'patience', 'wisdom', 'knowledge', 'learn', 'teach', 'grow',
+        'expansion', 'innovation', 'evolve', 'change', 'transform', 'balance',
+        'harmony', 'connect', 'communicate', 'collaborate', 'community', 'together',
+        'support', 'embrace', 'kindred', 'soul', 'heart', 'spirit', 'nature',
+        'semicolon', 'colon'
+    ]
+    sentence = ' '.join(random.choice(words) + random.choice(['', ',', ';', ':']) for _ in range(num_words))
+    return sentence.capitalize() + '.'
+
+def create_files(dimMin,dimMax,numFile):
+    for _ in range(numFile):
+        dimA = str(random.uniform(dimMin,dimMax))
+        nomeFile = f"file{dimA}.txt" #TODO acpire come arrotorndare il nome
+
+        with open(nomeFile, "w") as file:
+            dim = random.uniform(dimMin, dimMax)
+            numWords = random.randint(5, 15)  # Random number of words per sentence
+            numSentences = int((dim * 1000000) / (numWords * 5))  # Assuming average word length of 5 characters
+
+            for _ in range(numSentences):
+                sentence = generate_random_sentence(numWords) + '\\n'
+                file.write(sentence)
+                
+    def convert_file(input_file,output_file):
+        subprocess.run(['pandoc', input_file, '-o', output_file])
+        print(f'File "{input_file}" converted to "{output_file}" successfully.')
+
 
 # Sostituisci 'nuovo_utente' e 'nuova_password' con i valori desiderati
 #new_username = 'nuovo_utente'
 #new_password = 'nuova_password'
 
 #create_user(new_username, new_password)
+
+#create_files(1,50,10) crea 10 file di dimensione variabile 1 a 50 MB
 """
-
-
 
 print(""" _____                    _                  _                          _    _                                                                          _                                           _               
 /  ___|                  | |                | |                        | |  (_)                                                                        | |                                         | |              
@@ -267,22 +310,22 @@ print(""" _____                    _                  _                         
 
 """)
 print("This script allows you to create an OCI image for a deception component with a SAMBA server.")
-while(True):
+while True:
     choice = int(input("""
 ----------------------------------------------------------------------------------
-Choose what type of sharing do you prefer: 0 --> public, 1 --> privale, 2 --> both
+Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> both
 ----------------------------------------------------------------------------------
     """))
     if choice == 0:
-        #TODO inserirme modifica a smb.config
+        # TODO inserirme modifica a smb.config
         break
     elif choice == 1:
-        number_of_user=int(input("how many user do you want create?"))
-        for _ in range (number_of_user):
-            username=input("insert username")
-            password=input("insert password for user " + username)
-            base_setup_content=base_setup_content+"\ncreate_user("+username+","+password+")"
-            #TODO inserire parte per modificare il samba config in modo da abilitare condivisioni private
+        number_of_user = int(input("how many user do you want create?"))
+        for _ in range(number_of_user):
+            username = input("insert username")
+            password = input("insert password for user " + username)
+            base_setup_content = base_setup_content + "\ncreate_user(" + '"' + username + '"' + "," + '"' + password + '"' ")"
+            # TODO inserire parte per modificare il samba config in modo da abilitare condivisioni private
         break
     elif choice == 2:
         number_of_user = int(input("how many user do you want create?"))
@@ -294,7 +337,7 @@ Choose what type of sharing do you prefer: 0 --> public, 1 --> privale, 2 --> bo
         break
     else:
         print("Invalid choice")
-while(True): ##Ci piace??
+while (True):  ##Ci piace??
     choice = int(input("""
 ----------------------------------------------------------------------------------
 Choose what type of file system do you prefer: 0 --> home, 1 --> work
@@ -334,4 +377,3 @@ with open("smb.conf", 'w') as file:
 # write the Dockerfile file
 with open("Dockerfile", 'w') as file:
     file.write(base_dockerfile_content)
-

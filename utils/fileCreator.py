@@ -23,15 +23,7 @@ def generate_random_sentence(num_words):
     sentence = ' '.join(random.choice(words) + random.choice(['', ',', ';', ':']) for _ in range(num_words))
     return sentence.capitalize() + '.'
 
-def main():
-    if len(sys.argv) != 4:
-        print("Usage: python file_creator.py <dimMin> <dimMax> <numFile>")
-        sys.exit(-1)
-
-    dimMin = float(sys.argv[1])
-    dimMax = float(sys.argv[2])
-    numFile = int(sys.argv[3])
-
+def create_files(dimMin,dimMax,numFile):
     for _ in range(numFile):
         dimA = str(random.uniform(dimMin,dimMax))
         nomeFile = f"file{dimA}.txt" #TODO acpire come arrotorndare il nome
@@ -45,5 +37,4 @@ def main():
                 sentence = generate_random_sentence(numWords) + '\n'
                 file.write(sentence)
 
-if __name__ == "__main__":
-    main()
+
