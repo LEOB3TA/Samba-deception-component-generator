@@ -12,8 +12,10 @@ def create_user(username, password):
     except subprocess.CalledProcessError as e:
         print(f'Errore durante la creazione dell\'utente: {e}')
 
+
 def makeFS(type):
-    # questp è stato messo qui per creare la cartella della base path perchèà deve esistere, non è detto che serva dipende da dove condivide samba
+    # questo è stato messo qui per creare la cartella della base path perché deve esistere, non è detto che serva, ma
+    # dipende da dove condivide SAMBA
     # Specify the path for the new folder
     base_path = '/path/to/your/base_folder'
 
@@ -29,8 +31,7 @@ def makeFS(type):
         folder_path = os.path.join(base_path, folder)
         os.makedirs(folder_path)
         print(f"Folder '{folder_path}' created successfully.")
-    if type=="home":
-
+    if type == "home":
         # Create the full path by joining the base path with the nested folders
         full_path = os.path.join(base_path, *user_folders)
 
@@ -38,6 +39,7 @@ def makeFS(type):
         os.makedirs(full_path)
 
         print(f"Folder structure '{full_path}' created successfully.")
+
 
 def generate_random_sentence(num_words):
     words = [

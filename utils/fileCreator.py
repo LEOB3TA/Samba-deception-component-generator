@@ -1,6 +1,6 @@
-import os
+from datetime import datetime
 import random
-import sys
+
 
 def generate_random_sentence(num_words):
     words = [
@@ -23,18 +23,27 @@ def generate_random_sentence(num_words):
     sentence = ' '.join(random.choice(words) + random.choice(['', ',', ';', ':']) for _ in range(num_words))
     return sentence.capitalize() + '.'
 
-def create_files(dimMin,dimMax,numFile):
-    for _ in range(numFile):
-        dimA = str(random.uniform(dimMin,dimMax))
-        nomeFile = f"file{dimA}.txt" #TODO acpire come arrotorndare il nome
 
-        with open(nomeFile, "w") as file:
-            dim = random.uniform(dimMin, dimMax)
-            numWords = random.randint(5, 15)  # Random number of words per sentence
-            numSentences = int((dim * 1000000) / (numWords * 5))  # Assuming average word length of 5 characters
+def create_files(dim_min, dim_max, num_file):
+    for _ in range(num_file):
+        dim_a = str(round(random.uniform(dim_min, dim_max), 1))
+        current_datetime = datetime.now()
+        formatted_datetime = current_datetime.strftime("%Y%m%d")
+        nome_file = f"{formatted_datetime}_{dim_a}MB.txt"
+        print(nome_file)
 
-            for _ in range(numSentences):
-                sentence = generate_random_sentence(numWords) + '\n'
+        with open(nome_file, "w") as file:
+            dim = random.uniform(dim_min, dim_max)
+            num_words = random.randint(5, 15)  # Random number of words per sentence
+            num_sentences = int((dim * 1000000) / (num_words * 5))  # Assuming average word length of 5 characters
+
+            for _ in range(num_sentences):
+                sentence = generate_random_sentence(num_words) + '\n'
                 file.write(sentence)
 
 
+def main():
+    dim_min = 100
+    dim_max = 200
+    num_file = 1
+    create_files(dim_min, dim_max, num_file)

@@ -6,8 +6,6 @@ The goal of this project is to create a fake resource generator for one specific
     • The final output of the generator must be a OCI compatible image ready to be instantiated
     • The container image must include all the relevant "fake" data for its correct operation
     • The container must function out of the box, eventual configuration has to be provided during the generation to build the final working image
-
-
         ◦ support both public and private shares
         ◦ automatically generated and realistic fs hierarchy
         ◦ populated with generated word/pdf files (https://pandoc.org/)
@@ -18,9 +16,9 @@ The goal of this project is to create a fake resource generator for one specific
 <li>Controllare che il comando COPY effettivamente copi il nostro file desiderato</li>
 <li>Capire come generare i file e inserirli nel filesystem fake</li>
 <li>Controllare che le porte siano corrette</li>
-<li>inserire alcune catture alle eccezioni</li>
-<li>COntrollare i todo nello script</li>
-<li>È necesaria la funzione __main__ in python??</li>
+<li>Inserire alcune catture alle eccezioni</li>
+<li>Controllare i todo nello script</li>
+<li>È necessaria la funzione __main__ in python??</li>
 </ul>
 
 
