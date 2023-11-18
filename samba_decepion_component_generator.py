@@ -2,20 +2,19 @@ base_dockerfile_content = """# Usa l'immagine di Ubuntu 20.04 come base
 FROM ubuntu:20.04
 
 # Aggiorna il repository degli apt e installa Samba
-RUN apt-get update && \
-            apt-get install -y samba && \
-            apt-get install -y python3 && \
-            apt-get install pandoc && \
-            apt-get install texlive-latex-base && \
-            apt-get install texlive-fonts-recommended && \
-            apt-get install texlive-fonts-extra && \
-            apt-get install texlive-latex-extra
-##  apt-get clean && \
-##   rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \\
+ apt-get install -y samba && \\
+            apt-get install -y pandoc && \\
+            apt-get install -y texlive-latex-base && \\
+            apt-get install -y texlive-fonts-recommended && \\
+            apt-get install -y texlive-fonts-extra && \\
+          #  apt-get install -y texlive-latex-extra && \\
+            apt-get clean && \\
+            rm -rf /var/lib/apt/lists/*
 
 #Copia il file setup.py e lo esegue
-COPY setup.py /home/
-RUN python3 /home/setup.py && rm /home/setup.py
+COPY setup.py /
+RUN python3 /setup.py && rm /setup.py
 
 # Copia il file di configurazione di Samba nella posizione corretta
 COPY smb.conf /etc/samba/smb.conf
@@ -244,90 +243,139 @@ base_smb_config_content = """#======================= Global Settings ==========
 base_setup_content = """import subprocess
 import random
 import os
+from datetime import datetime, timedelta
 
-def create_user(username, password):
-    try:
-        # Creare un nuovo utente
-        subprocess.run(['sudo', 'useradd', '-m', '-p', password, username], check=True)
-        subprocess.run(['sudo', 'smbpasswd','-a', '-p', password, username], check=True)
-        print(f'Utente "{username}" creato con successo.')
-    except subprocess.CalledProcessError as e:
-       print(f'Errore durante la creazione dell\\'utente: {e}')
-       
-def makeFS(type):
-    # questp è stato messo qui per creare la cartella della base path perchèà deve esistere, non è detto che serva dipende da dove condivide samba
-    # Specify the path for the new folder
-    base_path = '/path/to/your/base_folder'
+users = []
 
-    # Use the os.makedirs() function to create the folder along with any necessary parent folders
-    os.makedirs(base_path)
-
-    print(f"Folder '{base_path}' created successfully.")
-    # TODO capire quel è la cartella dove samba condivide
-
-    # Specify the user folders
-    user_folders = ['Documents', 'Pictures', 'Downloads', 'Desktop']
-    for folder in user_folders:
-        folder_path = os.path.join(base_path, folder)
-        os.makedirs(folder_path)
-        print(f"Folder '{folder_path}' created successfully.")
-    if type=="home":
-
-        # Create the full path by joining the base path with the nested folders
-        full_path = os.path.join(base_path, *user_folders)
-
-        # Use os.makedirs() to create the nested folder structure
-        os.makedirs(full_path)
-
-        print(f"Folder structure '{full_path}' created successfully.")
-       
 def generate_random_sentence(num_words):
     words = [
-        'apple', 'banana', 'orange', 'grape', 'kiwi', 'python', 'programming',
-        'random', 'file', 'dimension', 'dog', 'cat', 'house', 'car', 'beach',
-        'computer', 'cloud', 'flower', 'mountain', 'ocean', 'sun', 'moon',
-        'rainbow', 'coffee', 'book', 'music', 'dance', 'happy', 'friend',
-        'journey', 'adventure', 'love', 'peace', 'smile', 'laughter', 'family',
-        'holiday', 'vacation', 'explore', 'discover', 'treasure', 'magic',
-        'wonder', 'secret', 'fantasy', 'imagination', 'create', 'inspire',
-        'dream', 'believe', 'achieve', 'success', 'victory', 'celebrate',
-        'challenge', 'effort', 'energy', 'focus', 'persevere', 'progress',
-        'mindful', 'grateful', 'kindness', 'forgive', 'compassion', 'courage',
-        'strength', 'patience', 'wisdom', 'knowledge', 'learn', 'teach', 'grow',
-        'expansion', 'innovation', 'evolve', 'change', 'transform', 'balance',
-        'harmony', 'connect', 'communicate', 'collaborate', 'community', 'together',
-        'support', 'embrace', 'kindred', 'soul', 'heart', 'spirit', 'nature',
-        'semicolon', 'colon'
-    ]
+    'apple', 'banana', 'orange', 'grape', 'kiwi', 'python', 'programming',
+    'random', 'file', 'dimension', 'dog', 'cat', 'house', 'car', 'beach',
+    'computer', 'cloud', 'flower', 'mountain', 'ocean', 'sun', 'moon',
+    'rainbow', 'coffee', 'book', 'music', 'dance', 'happy', 'friend',
+    'journey', 'adventure', 'love', 'peace', 'smile', 'laughter', 'family',
+    'holiday', 'vacation', 'explore', 'discover', 'treasure', 'magic',
+    'wonder', 'secret', 'fantasy', 'imagination', 'create', 'inspire',
+    'dream', 'believe', 'achieve', 'success', 'victory', 'celebrate',
+    'challenge', 'effort', 'energy', 'focus', 'persevere', 'progress',
+    'mindful', 'grateful', 'kindness', 'forgive', 'compassion', 'courage',
+    'strength', 'patience', 'wisdom', 'knowledge', 'learn', 'teach', 'grow',
+    'expansion', 'innovation', 'evolve', 'change', 'transform', 'balance',
+    'harmony', 'connect', 'communicate', 'collaborate', 'community', 'together',
+    'support', 'embrace', 'kindred', 'soul', 'heart', 'spirit', 'nature',
+    'semicolon', 'colon', 'create', 'inspire', 'imagine', 'explore', 'discover',
+    'treasure', 'dream', 'believe', 'achieve', 'celebrate', 'challenge', 'effort',
+    'focus', 'persevere', 'progress', 'mindfully', 'gratefully', 'kindly', 'forgive',
+    'compassionately', 'courageously', 'strength', 'patiently', 'wisdom', 'knowledge',
+    'learn', 'teach', 'grow', 'expand', 'innovate', 'evolve', 'change', 'transform',
+    'balance', 'harmony', 'connect', 'communicate', 'collaborate', 'community', 'together',
+    'support', 'embrace', 'kindred', 'soul', 'heart', 'spirit', 'nature', 'semicolon',
+    'colon', 'create', 'inspire', 'imagine', 'explore', 'discover', 'treasure', 'dream',
+    'believe', 'achieve', 'celebrate', 'challenge', 'effort', 'focus', 'persevere',
+    'progress', 'mindfully', 'gratefully', 'kindly', 'forgive', 'compassionately',
+    'courageously', 'strength', 'patiently', 'wisdom', 'knowledge', 'learn', 'teach',
+    'grow', 'expand', 'innovate', 'evolve', 'change', 'transform', 'balance', 'harmony',
+    'connect', 'communicate', 'collaborate', 'community', 'together', 'support', 'embrace',
+    'kindred', 'soul', 'heart', 'spirit', 'nature', 'semicolon', 'colon'
+]
     sentence = ' '.join(random.choice(words) + random.choice(['', ',', ';', ':']) for _ in range(num_words))
     return sentence.capitalize() + '.'
 
-def create_files(dimMin,dimMax,numFile):
-    for _ in range(numFile):
-        dimA = str(random.uniform(dimMin,dimMax))
-        nomeFile = f"file{dimA}.txt" #TODO acpire come arrotorndare il nome
+# Creates num_file files with a random dimension beetween dim_min and dim_max using generate_random_sentence with a random name
+def create_files(dim_min, dim_max, num_file):
+    wordlist = ['pwd', 'password', 'Password', 'myFile', 'my_file', 'note', 'file', 'File', 'secret',
+            'document', 'confidential', 'private', 'backup', 'important', 'data', 'access', 'admin',
+            'login', 'username', 'security', 'top_secret', 'classified', 'sensitive', 'confidential_info',
+            'john', 'mary', 'bob', 'alice', 'steve', 'jane', 'mark', 'sara', 'david', 'emily', 'chiara',
+            'project', 'report', 'draft', 'memo', 'info', 'key', 'code', 'account', 'profile', 'log',
+            'archive', 'client_list', 'employee_info', 'finance', 'budget', 'meeting_notes', 'agenda',
+            'presentation', 'proposal', 'contract', 'invoice', 'receipt', 'schedule', 'calendar', 'task_list',
+            'reminder', 'reminder_list', 'team_notes', 'survey', 'feedback', 'survey_results', 'analysis',
+            'research', 'survey_data', 'survey_responses', 'policy', 'procedure', 'manual', 'guide', 'instructions',
+            'training_material', 'tutorial', 'user_guide', 'setup_guide', 'config', 'configuration', 'settings',
+            'setup_info', 'install_guide', 'release_notes', 'version_info', 'update', 'patch', 'bug_report',
+            'issue_log', 'error_log', 'debug_info', 'test_data', 'test_cases', 'test_results', 'bug_fixes',
+            'improvements', 'enhancements', 'feature_request', 'wishlist', 'roadmap', 'milestones']
+    for _ in range(num_file):
+        file_dim = random.uniform(dim_min, dim_max)
+        current_datetime = datetime.now()
+        random_offset = random.randint(0, 1825)  # 5 years
+        formatted_datetime = (current_datetime - timedelta(days=random_offset)).strftime("%Y%m%d")
+        nome = random.choice(wordlist)
+        nome_file = f"{nome}_{formatted_datetime}.txt"
+        with open(nome_file, "w") as file:
+            num_words = random.randint(5, 15)  # Random number of words per sentence
+            num_sentences = int((file_dim * 1000000) / (num_words * 5))  # Assuming average word length of 5 characters
 
-        with open(nomeFile, "w") as file:
-            dim = random.uniform(dimMin, dimMax)
-            numWords = random.randint(5, 15)  # Random number of words per sentence
-            numSentences = int((dim * 1000000) / (numWords * 5))  # Assuming average word length of 5 characters
-
-            for _ in range(numSentences):
-                sentence = generate_random_sentence(numWords) + '\\n'
+            for _ in range(num_sentences):
+                sentence = generate_random_sentence(num_words) + '\\n'
                 file.write(sentence)
-                
-    def convert_file(input_file,output_file):
-        subprocess.run(['pandoc', input_file, '-o', output_file])
-        print(f'File "{input_file}" converted to "{output_file}" successfully.')
+    return
+
+# create user in the system and add it to samba users
+def create_user(username, password):
+    try:
+        # Creare un nuovo utente
+        subprocess.run(['useradd', '-m', '-p', password, username], check=True)
+        command = f'(echo "{password}"; echo "{password}")  | smbpasswd -s -a "{username}"'
+        subprocess.run(command, shell=True, check=True)
+        print(f'Utente "{username}" created.')
+        users.append(username)
+    except subprocess.CalledProcessError as e:
+        print(f'Errore durante la creazione dell\\'utente: {e}')
 
 
-# Sostituisci 'nuovo_utente' e 'nuova_password' con i valori desiderati
-#new_username = 'nuovo_utente'
-#new_password = 'nuova_password'
+def convert_to_word(input_file, output_file):
+    subprocess.run(["pandoc", input_file, "-o", output_file])
 
-#create_user(new_username, new_password)
 
-#create_files(1,50,10) crea 10 file di dimensione variabile 1 a 50 MB
+def convert_to_pdf(input_file, output_file):
+    subprocess.run(["pandoc", input_file, "-o", output_file])
+
+
+def create_and_populate_folder(base_path,folder):
+    folder_path = os.path.join(base_path, folder)
+    os.makedirs(folder_path)
+    print(f"Folder '{folder_path}' created successfully.")
+    os.chdir(folder_path)
+    random_files_number = random.randint(0, 10)
+    create_files(0.0001, 0.1, random_files_number)  # DON'T CHANGE THE DIMENSIONS 
+    txt_files = [file for file in os.listdir(folder_path)]
+    random_number = random.randint(0, len(txt_files))
+    txt_files_word = txt_files[:random_number]
+    txt_files_pdf = txt_files[random_number:]
+
+    for input_file in txt_files_word:
+        output_file = os.path.splitext(input_file)[0] + ".docx"
+        convert_to_word(input_file, output_file)
+
+    for input_file in txt_files_pdf:
+        output_file = os.path.splitext(input_file)[0] + ".pdf"
+        convert_to_pdf(input_file, output_file)
+    for file in txt_files:
+        os.remove(file)
+    print(f"{folder_path} populated with files")
+    os.chdir(base_path)
+    
+def make_fs(type):
+    base_path = '/sambashare'
+    os.mkdir(base_path)
+
+    if type == "public" or "both":
+        public_folders = ['Public', 'Public/Shared_Documents', 'Public/Shared_Pictures']
+        for folder in public_folders:
+           create_and_populate_folder(base_path,folder)
+    if type == "private" or "both":
+        for user in users:
+            base_user_path = os.path.join(base_path, user)
+            # Specify the user folders
+            user_folders = ['Documents', 'Documents/personal/', 'Documents/personal/lawyer',
+                            'Documents/personal/family',
+                            'Documents/work/', 'Documents/work/projects', 'Pictures', 'Downloads',
+                            'Downloads/important_documents', 'Desktop', 'Desktop/trash', 'Desktop/work']
+            for folder in user_folders:
+                create_and_populate_folder(base_user_path,folder)
+
 """
 
 print(""" _____                    _                  _                          _    _                                                                          _                                           _               
@@ -349,25 +397,27 @@ Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> bo
 ----------------------------------------------------------------------------------
     """))
     if choice == 0: #change [folder] if you change the folder in samba, other options: guest ok = yes create mask =0775
-        base_smb_config_content=base_smb_config_content + "\n"+ "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
+        base_smb_config_content = base_smb_config_content + "\n"+ "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
+        base_setup_content += 'make_fs("public")'
         break
     elif choice == 1:
-        base_setup_content.replace(f"public_share = True", f"public_share = False")
         number_of_user = int(input("how many user do you want create?"))
         for _ in range(number_of_user):
             username = input("insert username: ")
-            password = input("insert password for user " + username+": ")
-            base_setup_content = base_setup_content + f"\ncreate_user(" + '"' + username + '"' + "," + '"' + password + '"' ")"
-            base_smb_config_content=base_smb_config_content + "\n"+ "["+username+"]"+"\ncomment = private folder\npath = /sambashare/"+username+"\npublic=no\nguest ok=no"
+            password = input(f"insert password for user {username}: ")
+            base_setup_content += f'\ncreate_user("{username}","{password}")\n'
+            base_smb_config_content += "\n"+ "["+username+"]"+"\ncomment = private folder\npath = /sambashare/"+username+"\npublic=no\nguest ok=no"
+        base_setup_content += 'make_fs("private")'
         break
     elif choice == 2:
         base_smb_config_content=base_smb_config_content + "\n"+ "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
         number_of_user = int(input("how many user do you want create? "))
         for _ in range(number_of_user):
             username = input("insert username: ")
-            password = input("insert password for user " + username+": ")
-            base_setup_content = base_setup_content + "\ncreate_user(" + username + "," + password + ")"
+            password = input(f"insert password for user {username}: ")
+            base_setup_content += f'\ncreate_user("{username}","{password}")\n'
             base_smb_config_content=base_smb_config_content + "\n"+ "["+username+"]"+"\ncomment = private folder\npath = /sambashare/"+username+"\npublic=no\nguest ok=no"
+        base_setup_content += 'make_fs("both")'
         break
     else:
         print("Invalid choice")
