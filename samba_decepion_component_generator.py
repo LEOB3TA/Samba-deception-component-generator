@@ -28,6 +28,8 @@ EXPOSE 137/udp 138/udp 139 445
 # Avvia il servizio Samba quando il contenitore viene avviato
 CMD ["smbd", "--foreground", "--no-process-group"]"""
 
+
+
 base_smb_config_content = """#======================= Global Settings =======================
 
 [global]
@@ -474,8 +476,9 @@ Do you want LDAP authentication: 0 --> yes, 1 --> no
     """))
     if choice == 0:
         print("yes\n")  # creare implementzioni corrette
-        serverLdap = input("insert LDAP server: ")
-        dn = input("insert distinguished name (DN): ")
+        IPserverLdap = input("insert IP of LDAP server: ")
+        base_smb_config_content = base_smb_config_content[:74] + "\n"+ "passdb backend = ldapsam:ldap://"+IPserverLdap+"\nldap suffix = dc=example,dc=org\nldap user suffix = cn=users,cn=accounts\n"+base_smb_config_content[74:]
+        #dn = input("insert distinguished name (DN): ")
         break
     elif choice == 1:
         print("no")  # creare implementzioni corrette
