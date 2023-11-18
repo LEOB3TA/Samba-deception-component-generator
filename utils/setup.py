@@ -97,7 +97,7 @@ def makeFS():
         os.makedirs(folder_path)
         print(f"Folder '{folder_path}' created successfully.")
         os.chdir(folder_path)
-        random_files_number=random.randint(3, 20)
+        random_files_number=random.randint(0, 20)
         create_files(0.0001, 0.2, random_files_number) #DON'T CHANGE THE DIMENSIONS
         txt_files = [file for file in os.listdir(folder_path)]
         random_number = random.randint(0,len(txt_files))
