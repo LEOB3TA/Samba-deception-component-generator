@@ -1,8 +1,21 @@
 import subprocess
 import random
 import os
-from datetime import datetime
+from datetime import datetime,timedelta
 import ldap
+
+def authenticate(username, password):
+    ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
+    server = "ldaps://ldap.example.com:636"
+    base_dn = "dc=example.com"
+    user_dn = "uid={},{}".format(username, base_dn)
+    try:
+        l = ldap.initialize(server)
+        l.protocol_version = ldap.VERSION3
+
+        l.simple_bind_s(user_dn, password)
+    except subprocess.CalledProcessError as e:
+        print(f'Errore LDAP: {e}')
 
 
 def generate_random_sentence(num_words):
@@ -26,21 +39,6 @@ def generate_random_sentence(num_words):
     sentence = ' '.join(random.choice(words) + random.choice(['', ',', ';', ':']) for _ in range(num_words))
     return sentence.capitalize() + '.'
 
-
-def authenticate(username, password):
-    ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
-    server = "ldaps://ldap.example.com:636"
-    base_dn = "dc=example.com"
-    user_dn = "uid={},{}".format(username, base_dn)
-    try:
-        l = ldap.initialize(server)
-        l.protocol_version = ldap.VERSION3
-        
-        l.simple_bind_s(user_dn, password)
-    except subprocess.CalledProcessError as e:
-        print(f'Errore LDAP: {e}')
-
-
 def create_files(dim_min, dim_max, num_file):
     wordlist = ['pwd', 'password', 'Password', 'myFile', 'my_file', 'note', 'file', 'File', 'secret',
                 'document', 'confidential', 'private', 'backup', 'important', 'data', 'access', 'admin',
@@ -49,7 +47,8 @@ def create_files(dim_min, dim_max, num_file):
     for _ in range(num_file):
         file_dim = random.uniform(dim_min, dim_max)
         current_datetime = datetime.now()
-        formatted_datetime = current_datetime.strftime("%Y%m%d")
+        random_offset = random.randint(0, 1825) #5 years
+        formatted_datetime = (current_datetime + timedelta(days=random_offset)).strftime("%Y%m%d")
         nome=random.choice(wordlist)
         nome_file = f"{nome}_{formatted_datetime}.txt"
         print(nome_file)
