@@ -1,3 +1,6 @@
+import subprocess
+import os
+
 base_dockerfile_content = """# Usa l'immagine di Ubuntu 20.04 come base
 FROM ubuntu:20.04
 
@@ -378,6 +381,44 @@ def make_fs(type):
 
 """
 
+def build_docker_image(image_name, dockerfile_path='.', build_args=None):
+    """
+     Build a Docker image from a specified Dockerfile using subprocess.
+
+     :param image_name: Name for the Docker image.
+     :param dockerfile_path: Path to the directory containing the Dockerfile.
+     :param build_args: Dictionary of build arguments (optional).
+     """
+    build_command = ['docker', 'build', '-t', image_name]
+
+    if build_args:
+        for key, value in build_args.items():
+            build_command.extend(['--build-arg', f'{key}={value}'])
+
+    build_command.append(dockerfile_path)
+
+    try:
+        print(f"Building Docker image {image_name}...")
+        build_process = subprocess.Popen(
+            build_command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True
+        )
+
+        for output in build_process.stdout:
+            print(output.strip())
+
+        build_process.wait()
+
+        if build_process.returncode == 0:
+            print(f"Docker image {image_name} built successfully.")
+        else:
+            print(f"Failed to build Docker image {image_name}.")
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
 print(""" _____                    _                  _                          _    _                                                                          _                                           _               
 /  ___|                  | |                | |                        | |  (_)                                                                        | |                                         | |              
 \ `--.   __ _  _ __ ___  | |__    __ _    __| |  ___   ___  ___  _ __  | |_  _   ___   _ __     ___  ___   _ __ ___   _ __    ___   _ __    ___  _ __  | |_    __ _   ___  _ __    ___  _ __  __ _ | |_  ___   _ __ 
@@ -390,6 +431,7 @@ print(""" _____                    _                  _                         
 
 """)
 print("This script allows you to create an OCI image for a deception component with a SAMBA server.")
+
 while True:
     choice = int(input("""
 ----------------------------------------------------------------------------------
@@ -401,7 +443,10 @@ Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> bo
         base_setup_content += 'make_fs("public")'
         break
     elif choice == 1:
-        number_of_user = int(input("how many user do you want create?"))
+        try:
+            number_of_user = int(input("how many user do you want create?"))
+        except:
+            print("you have to insert a integer number")
         for _ in range(number_of_user):
             username = input("insert username: ")
             password = input(f"insert password for user {username}: ")
@@ -411,7 +456,7 @@ Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> bo
         break
     elif choice == 2:
         base_smb_config_content=base_smb_config_content + "\n"+ "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
-        number_of_user = int(input("how many user do you want create? "))
+        number_of_user = int(input("how many user do you want create?"))
         for _ in range(number_of_user):
             username = input("insert username: ")
             password = input(f"insert password for user {username}: ")
@@ -421,7 +466,7 @@ Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> bo
         break
     else:
         print("Invalid choice")
-while (True):  ##Ci piace??
+while True:
     choice = int(input("""
 ----------------------------------------------------------------------------------
 Do you want LDAP authentication: 0 --> yes, 1 --> no
@@ -438,14 +483,51 @@ Do you want LDAP authentication: 0 --> yes, 1 --> no
     else:
         print("Invalid choice")
 
+os.mkdir("image")
 # write the setup file
-with open("setup.py", 'w') as file:
+with open("./image/setup.py", 'w') as file:
     file.write(base_setup_content)
 
 # write smb.conf file
-with open("smb.conf", 'w') as file:
+with open("./image/smb.conf", 'w') as file:
     file.write(base_smb_config_content)
 
 # write the Dockerfile file
-with open("Dockerfile", 'w') as file:
+with open("./image/Dockerfile", 'w') as file:
     file.write(base_dockerfile_content)
+
+while True:
+    choice = int(input("""
+----------------------------------------------------------------------------------
+If you have docker do you want build the image? : 0 --> yes, 1 --> no
+----------------------------------------------------------------------------------
+    """))
+    if choice == 0:
+        image_name=input("insert the name of the image: ")
+        build_docker_image(image_name, "./image/") #TODO verificare funzionamento, sembra che la buildi ma nnon la runni
+        break
+    elif choice == 1:
+        break
+    else:
+        print("Invalid choice")
+
+while True: #TODO non funziona la cartella image la crea effettivamwnte a fine programma
+    choice = int(input("""
+----------------------------------------------------------------------------------
+Do you want delete all the created files? : 0 --> yes, 1 --> no
+----------------------------------------------------------------------------------
+    """))
+    if choice == 0:
+        os.rmdir("image")
+        break
+    elif choice == 1:
+        break
+    else:
+        print("Invalid choice")
+
+print("""
+----------------------------------------------------------------------------------
+Thanks for using this script.
+Author: Antonio Cassanelli, Leonardo Focardi, Christian Galeone
+----------------------------------------------------------------------------------
+""")
