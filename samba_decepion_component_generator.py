@@ -348,22 +348,22 @@ while True:
 Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> both
 ----------------------------------------------------------------------------------
     """))
-    if choice == 0:
-        # TODO inserirme modifica a smb.config
+    if choice == 0: #change [folder] if you change the folder in samba, other options: guest ok = yes create mask =0775
+        base_smb_config_content=base_smb_config_content + "\n"+ "[folder]\ncomment = folder\npath = /folder\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
         break
     elif choice == 1:
         base_setup_content.replace(f"public_share = True", f"public_share = False")
         number_of_user = int(input("how many user do you want create?"))
         for _ in range(number_of_user):
-            username = input("insert username")
+            username = input("insert username: ")
             password = input("insert password for user " + username)
             base_setup_content = base_setup_content + "\ncreate_user(" + '"' + username + '"' + "," + '"' + password + '"' ")"
-            # TODO inserire parte per modificare il samba config in modo da abilitare condivisioni private
+            base_smb_config_content=base_smb_config_content + "\n"+ "["+username+"]"+"\ncomment = private folder\npath = /privatefolder\npublic=no\nguest ok=no"
         break
     elif choice == 2:
-        number_of_user = int(input("how many user do you want create?"))
+        number_of_user = int(input("how many user do you want create? "))
         for _ in range(number_of_user):
-            username = input("insert username")
+            username = input("insert username: ")
             password = input("insert password for user " + username)
             base_setup_content = base_setup_content + "\ncreate_user(" + username + "," + password + ")"
             # TODO inserire parte per modificare il samba config in modo da abilitare condivisioni private e pubbliche
@@ -377,7 +377,9 @@ Do you want LDAP authentication: 0 --> yes, 1 --> no
 ----------------------------------------------------------------------------------
     """))
     if choice == 0:
-        print("yes")  # creare implementzioni corrette
+        print("yes\n")  # creare implementzioni corrette
+        serverLdap = input("insert LDAP server: ")
+        dn = input("insert distinguished name (DN): ")
         break
     elif choice == 1:
         print("no")  # creare implementzioni corrette

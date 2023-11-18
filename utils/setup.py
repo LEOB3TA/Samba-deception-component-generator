@@ -27,7 +27,6 @@ def generate_random_sentence(num_words):
     sentence = ' '.join(random.choice(words) + random.choice(['', ',', ';', ':']) for _ in range(num_words))
     return sentence.capitalize() + '.'
 
-
 def create_files(dim_min, dim_max, num_file):
     wordlist = ['pwd', 'password', 'Password', 'myFile', 'my_file', 'note', 'file', 'File', 'secret',
                 'document', 'confidential', 'private', 'backup', 'important', 'data', 'access', 'admin',
@@ -137,6 +136,7 @@ def make_fs():
             for file in txt_files:
                 os.remove(file)
             os.chdir(base_path)
+
 
 # Sostituisci 'nuovo_utente' e 'nuova_password' con i valori desiderati
 # new_username = 'nuovo_utente'
