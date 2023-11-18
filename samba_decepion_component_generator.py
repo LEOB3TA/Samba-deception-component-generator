@@ -352,6 +352,7 @@ Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> bo
         # TODO inserirme modifica a smb.config
         break
     elif choice == 1:
+        base_setup_content.replace(f"public_share = True", f"public_share = False")
         number_of_user = int(input("how many user do you want create?"))
         for _ in range(number_of_user):
             username = input("insert username")
