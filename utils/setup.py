@@ -73,7 +73,7 @@ def convert_to_pdf(input_file, output_file):
 def make_fs():
     # questp è stato messo qui per creare la cartella della base path perchèà deve esistere, non è detto che serva dipende da dove condivide samba
     # Specify the path for the new folder
-    base_path = '/samba_share'
+    base_path = '/sambashare'
     os.mkdir(base_path)
     subprocess.run(["chcon", "-t", "samba_share_t", directory_path], check=True)
     # TODO capire quel è la cartella dove samba condivide

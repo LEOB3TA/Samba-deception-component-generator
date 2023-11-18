@@ -349,24 +349,25 @@ Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> bo
 ----------------------------------------------------------------------------------
     """))
     if choice == 0: #change [folder] if you change the folder in samba, other options: guest ok = yes create mask =0775
-        base_smb_config_content=base_smb_config_content + "\n"+ "[folder]\ncomment = folder\npath = /folder\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
+        base_smb_config_content=base_smb_config_content + "\n"+ "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
         break
     elif choice == 1:
         base_setup_content.replace(f"public_share = True", f"public_share = False")
         number_of_user = int(input("how many user do you want create?"))
         for _ in range(number_of_user):
             username = input("insert username: ")
-            password = input("insert password for user " + username)
-            base_setup_content = base_setup_content + "\ncreate_user(" + '"' + username + '"' + "," + '"' + password + '"' ")"
-            base_smb_config_content=base_smb_config_content + "\n"+ "["+username+"]"+"\ncomment = private folder\npath = /privatefolder\npublic=no\nguest ok=no"
+            password = input("insert password for user " + username+": ")
+            base_setup_content = base_setup_content + f"\ncreate_user(" + '"' + username + '"' + "," + '"' + password + '"' ")"
+            base_smb_config_content=base_smb_config_content + "\n"+ "["+username+"]"+"\ncomment = private folder\npath = /sambashare/"+username+"\npublic=no\nguest ok=no"
         break
     elif choice == 2:
+        base_smb_config_content=base_smb_config_content + "\n"+ "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
         number_of_user = int(input("how many user do you want create? "))
         for _ in range(number_of_user):
             username = input("insert username: ")
-            password = input("insert password for user " + username)
+            password = input("insert password for user " + username+": ")
             base_setup_content = base_setup_content + "\ncreate_user(" + username + "," + password + ")"
-            # TODO inserire parte per modificare il samba config in modo da abilitare condivisioni private e pubbliche
+            base_smb_config_content=base_smb_config_content + "\n"+ "["+username+"]"+"\ncomment = private folder\npath = /sambashare/"+username+"\npublic=no\nguest ok=no"
         break
     else:
         print("Invalid choice")
