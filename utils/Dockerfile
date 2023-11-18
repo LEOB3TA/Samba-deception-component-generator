@@ -5,12 +5,12 @@ FROM ubuntu:20.04
 RUN apt-get update && \
  apt-get install -y samba && \
             apt-get install -y python3 && \
-            apt-get install pandoc && \
-            apt-get install texlive-latex-base && \
-            apt-get install texlive-fonts-recommended && \
-            apt-get install texlive-fonts-extra && \
-            apt-get install texlive-latex-extra
-  ##  apt-get clean && \
+            apt-get install -y pandoc && \
+            apt-get install -y texlive-latex-base && \
+            apt-get install -y texlive-fonts-recommended && \
+            apt-get install -y texlive-fonts-extra && \
+            apt-get install -y texlive-latex-extra && \
+            apt-get clean
  ##   rm -rf /var/lib/apt/lists/*
 
 #Copia il file setup.py e lo esegue
