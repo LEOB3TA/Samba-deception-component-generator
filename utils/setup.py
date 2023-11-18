@@ -88,13 +88,17 @@ def makeFS():
     # TODO capire quel è la cartella dove samba condivide
 
     # Specify the user folders
-    user_folders = ['Documents', 'Pictures', 'Downloads', 'Desktop', 'Public']
+    user_folders = ['Documents', 'Documents/personal/', 'Documents/personal/lawyer', 'Documents/personal/family',
+                    'Documents/work/', 'Documents/work/projects', 'Pictures', 'Downloads',
+                    'Downloads/important_documents', 'Desktop', 'Desktop/trash', 'Desktop/work',
+                    'Public/Shared_Documents', 'Public/Shared_Pictures']
     for folder in user_folders:
         folder_path = os.path.join(base_path, folder)
         os.makedirs(folder_path)
         print(f"Folder '{folder_path}' created successfully.")
         os.chdir(folder_path)
-        create_files(0.0001, 0.2, 20) #DON'T CHANGE THE DIMENSIONS
+        random_files_number=random.randint(3, 20)
+        create_files(0.0001, 0.2, random_files_number) #DON'T CHANGE THE DIMENSIONS
         txt_files = [file for file in os.listdir(folder_path)]
         random_number = random.randint(0,len(txt_files))
         txt_files_word = txt_files[:random_number]
