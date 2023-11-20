@@ -1,6 +1,7 @@
 import subprocess
 import os
 import shutil
+import sys
 
 base_dockerfile_content = """# Usa l'immagine di Ubuntu 20.04 come base
 FROM ubuntu:20.04
@@ -20,13 +21,21 @@ RUN apt-get update && \\
 COPY setup.py /
 RUN python3 /setup.py && rm /setup.py
 
+RUN apt-get remove -y pandoc && \\
+    apt-get remove -y texlive-latex-base && \\
+    apt-get remove -y texlive-fonts-recommended && \\
+    apt-get remove -y texlive-fonts-extra
+
 # Copia il file di configurazione di Samba nella posizione corretta
 COPY smb.conf /etc/samba/smb.conf
+
 
 # Esponi le porte necessarie per Samba
 EXPOSE 139 445
 
+
 # Avvia il servizio Samba quando il contenitore viene avviato
+RUN service smbd restart
 CMD ["smbd", "--foreground", "--no-process-group"]"""
 
 base_smb_config_content = """#======================= Global Settings =======================
@@ -464,7 +473,7 @@ Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> bo
             username = input("insert username: ")
             password = input(f"insert password for user {username}: ")
             base_setup_content += f'\ncreate_user("{username}","{password}")\n'
-            base_smb_config_content = base_smb_config_content + "\n" + "[" + username + "]" + "\ncomment = private folder\npath = /sambashare/" + username + "\npublic=no\nguest ok=no"
+            base_smb_config_content = base_smb_config_content + "\n" + "[" + username + "]" + "\ncomment = private folder\npath = /sambashare/" + username + "\npublic=no\nguest ok=no\nread only = no"
         base_setup_content += 'make_fs("both")'
         break
     else:
@@ -521,21 +530,24 @@ If you have docker do you want build the image? : 0 --> yes, 1 --> no
             print("Docker image built successfully.")
         except subprocess.CalledProcessError as e:
             print(f"Error building Docker image: {e}")
+            sys.exit(1)
         while True:
             choice = int(input("""
-        ----------------------------------------------------------------------------------
-        If you have docker do you want run the image? : 0 --> yes, 1 --> no
-        ----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+Do you want run the image? : 0 --> yes, 1 --> no
+----------------------------------------------------------------------------------
             """))
             if choice == 0:
-                port1 = int(input("Choose the actual port to which you want to map the port 139 of the image."))
-                port2 = int(input("Choose the actual port to which you want to map the port 445 of the image."))
-                docker_run_command = f"docker run docker run -p {port1}:139 -p {port2}:445 {image_name}"
+                port1 = int(input("Choose the actual port to which you want to map the port 139 of the image. "))
+                port2 = int(input("Choose the actual port to which you want to map the port 445 of the image. "))
+                docker_run_command = f"docker run -p 127.0.0.1:{port1}:139 -p 127.0.0.1:{port2}:445 {image_name} &"
                 try:
-                    subprocess.run(docker_run_command, shell=True, check=True)
+                    subprocess.run(docker_run_command,shell=True,check=True)
                     print("Docker image run successfully.")
                 except subprocess.CalledProcessError as e:
                     print(f"Error running Docker image: {e}")
+                    sys.exit(1)
+                break
             elif choice == 1:
                 break
             else:
