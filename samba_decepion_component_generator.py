@@ -1,5 +1,6 @@
 import subprocess
 import os
+import shutil
 
 base_dockerfile_content = """# Usa l'immagine di Ubuntu 20.04 come base
 FROM ubuntu:20.04
@@ -23,12 +24,10 @@ RUN python3 /setup.py && rm /setup.py
 COPY smb.conf /etc/samba/smb.conf
 
 # Esponi le porte necessarie per Samba
-EXPOSE 137/udp 138/udp 139 445
+EXPOSE 139 445
 
 # Avvia il servizio Samba quando il contenitore viene avviato
 CMD ["smbd", "--foreground", "--no-process-group"]"""
-
-
 
 base_smb_config_content = """#======================= Global Settings =======================
 
@@ -383,6 +382,7 @@ def make_fs(type):
 
 """
 
+
 def build_docker_image(image_name, dockerfile_path='.', build_args=None):
     """
      Build a Docker image from a specified Dockerfile using subprocess.
@@ -421,6 +421,7 @@ def build_docker_image(image_name, dockerfile_path='.', build_args=None):
     except Exception as e:
         print(f"An error occurred: {e}")
 
+
 print(""" _____                    _                  _                          _    _                                                                          _                                           _               
 /  ___|                  | |                | |                        | |  (_)                                                                        | |                                         | |              
 \ `--.   __ _  _ __ ___  | |__    __ _    __| |  ___   ___  ___  _ __  | |_  _   ___   _ __     ___  ___   _ __ ___   _ __    ___   _ __    ___  _ __  | |_    __ _   ___  _ __    ___  _ __  __ _ | |_  ___   _ __ 
@@ -440,8 +441,8 @@ while True:
 Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> both
 ----------------------------------------------------------------------------------
     """))
-    if choice == 0: #change [folder] if you change the folder in samba, other options: guest ok = yes create mask =0775
-        base_smb_config_content = base_smb_config_content + "\n"+ "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
+    if choice == 0:  # change [folder] if you change the folder in samba, other options: guest ok = yes create mask =0775
+        base_smb_config_content = base_smb_config_content + "\n" + "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
         base_setup_content += 'make_fs("public")'
         break
     elif choice == 1:
@@ -453,17 +454,17 @@ Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> bo
             username = input("insert username: ")
             password = input(f"insert password for user {username}: ")
             base_setup_content += f'\ncreate_user("{username}","{password}")\n'
-            base_smb_config_content += "\n"+ "["+username+"]"+"\ncomment = private folder\npath = /sambashare/"+username+"\npublic=no\nguest ok=no"
+            base_smb_config_content += "\n" + "[" + username + "]" + "\ncomment = private folder\npath = /sambashare/" + username + "\npublic=no\nguest ok=no"
         base_setup_content += 'make_fs("private")'
         break
     elif choice == 2:
-        base_smb_config_content=base_smb_config_content + "\n"+ "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
+        base_smb_config_content = base_smb_config_content + "\n" + "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
         number_of_user = int(input("how many user do you want create?"))
         for _ in range(number_of_user):
             username = input("insert username: ")
             password = input(f"insert password for user {username}: ")
             base_setup_content += f'\ncreate_user("{username}","{password}")\n'
-            base_smb_config_content=base_smb_config_content + "\n"+ "["+username+"]"+"\ncomment = private folder\npath = /sambashare/"+username+"\npublic=no\nguest ok=no"
+            base_smb_config_content = base_smb_config_content + "\n" + "[" + username + "]" + "\ncomment = private folder\npath = /sambashare/" + username + "\npublic=no\nguest ok=no"
         base_setup_content += 'make_fs("both")'
         break
     else:
@@ -477,8 +478,10 @@ Do you want LDAP authentication: 0 --> yes, 1 --> no
     if choice == 0:
         print("yes\n")  # creare implementzioni corrette
         IPserverLdap = input("insert IP of LDAP server: ")
-        base_smb_config_content = base_smb_config_content[:74] + "\n"+ "passdb backend = ldapsam:ldap://"+IPserverLdap+"\nldap suffix = dc=example,dc=org\nldap user suffix = cn=users,cn=accounts\n"+base_smb_config_content[74:]
-        #dn = input("insert distinguished name (DN): ")
+        base_smb_config_content = base_smb_config_content[
+                                  :74] + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=example,dc=org\nldap user suffix = cn=users,cn=accounts\n" + base_smb_config_content[
+                                                                                                                                                                                     74:]
+        # dn = input("insert distinguished name (DN): ")
         break
     elif choice == 1:
         print("no")  # creare implementzioni corrette
@@ -486,7 +489,11 @@ Do you want LDAP authentication: 0 --> yes, 1 --> no
     else:
         print("Invalid choice")
 
+if os.path.exists("image"):
+    shutil.rmtree("image")
+
 os.mkdir("image")
+
 # write the setup file
 with open("./image/setup.py", 'w') as file:
     file.write(base_setup_content)
@@ -506,22 +513,48 @@ If you have docker do you want build the image? : 0 --> yes, 1 --> no
 ----------------------------------------------------------------------------------
     """))
     if choice == 0:
-        image_name=input("insert the name of the image: ")
-        build_docker_image(image_name, "./image/") #TODO verificare funzionamento, sembra che la buildi ma nnon la runni
+        image_name = input("insert the name of the image: ")
+        docker_build_command = f"docker build -t {image_name} ./image/"
+        # Run the build command using subprocess
+        try:
+            subprocess.run(docker_build_command, shell=True, check=True)
+            print("Docker image built successfully.")
+        except subprocess.CalledProcessError as e:
+            print(f"Error building Docker image: {e}")
+        while True:
+            choice = int(input("""
+        ----------------------------------------------------------------------------------
+        If you have docker do you want run the image? : 0 --> yes, 1 --> no
+        ----------------------------------------------------------------------------------
+            """))
+            if choice == 0:
+                port1 = int(input("Choose the actual port to which you want to map the port 139 of the image."))
+                port2 = int(input("Choose the actual port to which you want to map the port 445 of the image."))
+                docker_run_command = f"docker run docker run -p {port1}:139 -p {port2}:445 {image_name}"
+                try:
+                    subprocess.run(docker_run_command, shell=True, check=True)
+                    print("Docker image run successfully.")
+                except subprocess.CalledProcessError as e:
+                    print(f"Error running Docker image: {e}")
+            elif choice == 1:
+                break
+            else:
+                print("Invalid choice")
         break
     elif choice == 1:
         break
     else:
         print("Invalid choice")
 
-while True: #TODO non funziona la cartella image la crea effettivamwnte a fine programma
+while True:
     choice = int(input("""
 ----------------------------------------------------------------------------------
 Do you want delete all the created files? : 0 --> yes, 1 --> no
 ----------------------------------------------------------------------------------
     """))
     if choice == 0:
-        os.rmdir("image")
+        os.sync()
+        shutil.rmtree("image")
         break
     elif choice == 1:
         break

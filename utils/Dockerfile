@@ -20,7 +20,7 @@ RUN python3 /setup.py && rm /setup.py
 COPY smb.conf /etc/samba/smb.conf
 
 # Esponi le porte necessarie per Samba
-EXPOSE 137/udp 138/udp 139 445
+EXPOSE 139 445
 
 # Avvia il servizio Samba quando il contenitore viene avviato
 CMD ["smbd", "--foreground", "--no-process-group"]
