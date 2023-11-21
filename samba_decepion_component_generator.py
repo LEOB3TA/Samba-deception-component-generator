@@ -1,7 +1,9 @@
+import platform
 import subprocess
 import os
 import shutil
 import sys
+import time
 
 base_dockerfile_content = """# Usa l'immagine di Ubuntu 20.04 come base
 FROM ubuntu:20.04
@@ -443,7 +445,7 @@ print(""" _____                    _                  _                         
 
 """)
 print("This script allows you to create an OCI image for a deception component with a SAMBA server.")
-
+time.sleep(0.5)
 while True:
     choice = int(input("""
 ----------------------------------------------------------------------------------
@@ -451,7 +453,7 @@ Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> bo
 ----------------------------------------------------------------------------------
     """))
     if choice == 0:  # change [folder] if you change the folder in samba, other options: guest ok = yes create mask =0775
-        base_smb_config_content = base_smb_config_content + "\n" + "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
+        base_smb_config_content = base_smb_config_content + "\n" + "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nwritable = yes\ncreate mask= 0666\n directory mask = 0777"
         base_setup_content += 'make_fs("public")'
         break
     elif choice == 1:
@@ -540,7 +542,10 @@ Do you want run the image? : 0 --> yes, 1 --> no
             if choice == 0:
                 port1 = int(input("Choose the actual port to which you want to map the port 139 of the image. "))
                 port2 = int(input("Choose the actual port to which you want to map the port 445 of the image. "))
-                docker_run_command = f"docker run -p 127.0.0.1:{port1}:139 -p 127.0.0.1:{port2}:445 {image_name} &"
+                if platform.system() == "Windows":
+                    docker_run_command = f"START /B docker run -p 127.0.0.1:{port1}:139 -p 127.0.0.1:{port2}:445 {image_name}"
+                else:
+                    docker_run_command = f"docker run -p 127.0.0.1:{port1}:139 -p 127.0.0.1:{port2}:445 {image_name} &"
                 try:
                     subprocess.run(docker_run_command,shell=True,check=True)
                     print("Docker image run successfully.")
