@@ -390,7 +390,9 @@ def make_fs(type):
                             'Downloads/important_documents', 'Desktop', 'Desktop/trash', 'Desktop/work']
             for folder in user_folders:
                 create_and_populate_folder(base_user_path,folder)
-
+            subprocess.run(f"chown -R {user} {base_user_path}",shell=True,check=True)
+            subprocess.run(f"chgrp -R {user} {base_user_path}",shell=True,check=True)
+            subprocess.run(f"chmod -R 770 {base_user_path}",shell=True,check=True)
 """
 
 
@@ -465,7 +467,7 @@ Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> bo
             username = input("insert username: ")
             password = input(f"insert password for user {username}: ")
             base_setup_content += f'\ncreate_user("{username}","{password}")\n'
-            base_smb_config_content += "\n" + "[" + username + "]" + "\ncomment = private folder\npath = /sambashare/" + username + "\npublic=no\nguest ok=no"
+            base_smb_config_content = base_smb_config_content + "\n" + "[" + username + "]" + "\ncomment = private folder\npath = /sambashare/" + username + "\npublic=no\nguest ok=no\nread only = no\ncreate mask= 0660\n directory mask = 0770\nvalid users = "+ username
         base_setup_content += 'make_fs("private")'
         break
     elif choice == 2:
@@ -475,7 +477,7 @@ Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> bo
             username = input("insert username: ")
             password = input(f"insert password for user {username}: ")
             base_setup_content += f'\ncreate_user("{username}","{password}")\n'
-            base_smb_config_content = base_smb_config_content + "\n" + "[" + username + "]" + "\ncomment = private folder\npath = /sambashare/" + username + "\npublic=no\nguest ok=no\nread only = no"
+            base_smb_config_content = base_smb_config_content + "\n" + "[" + username + "]" + "\ncomment = private folder\npath = /sambashare/" + username + "\npublic=no\nguest ok=no\nread only = no\ncreate mask= 0660\n directory mask = 0770\nvalid users = "+ username
         base_setup_content += 'make_fs("both")'
         break
     else:
