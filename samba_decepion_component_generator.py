@@ -48,7 +48,9 @@ base_smb_config_content = """#======================= Global Settings ==========
 
 # Change this to the workgroup/NT-domain name your Samba server will part of
    workgroup = WORKGROUP
-
+   client min protocol = NT1
+   client max protocol = SMB3 
+   security = user
 #### Networking ####
 
 # The specific set of interfaces / networks to bind to
@@ -375,11 +377,11 @@ def create_and_populate_folder(base_path,folder):
 def make_fs(type):
     base_path = '/sambashare'
     os.mkdir(base_path)
-
     if type == "public" or "both":
         public_folders = ['Public', 'Public/Shared_Documents', 'Public/Shared_Pictures']
         for folder in public_folders:
            create_and_populate_folder(base_path,folder)
+           subprocess.run(f"chmod -R 777 {base_path}/{folder}",shell=True,check=True)
     if type == "private" or "both":
         for user in users:
             base_user_path = os.path.join(base_path, user)
