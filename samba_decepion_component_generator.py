@@ -263,6 +263,7 @@ import os
 from datetime import datetime, timedelta
 
 users = []
+group_members=[]
 
 def generate_random_sentence(num_words):
     words = [
@@ -329,6 +330,12 @@ def create_files(dim_min, dim_max, num_file):
                 file.write(sentence)
     return
 
+def add_member(member):
+    try:
+        group_members.append(member)
+    except subprocess.CalledProcessError as e:
+        print(f'Errore funzione add_member: {e}')
+    
 # create user in the system and add it to samba users
 def create_user(username, password):
     try:
@@ -340,6 +347,19 @@ def create_user(username, password):
         users.append(username)
     except subprocess.CalledProcessError as e:
         print(f'Errore durante la creazione dell\\'utente: {e}')
+
+def create_group(group_name, list):
+    try:
+        path='/sambashare/'+group_name
+        subprocess.run(['mkdir', '-p', path], check=True)
+        subprocess.run(['groupadd', group_name], check=True)
+        subprocess.run(['chgrp', group_name,path], check=True)
+        subprocess.run(f"chmod -R 770 {path}",shell=True,check=True)
+        for m in group_members:
+            subprocess.run(['usermod', '-a', '-G', group_name, m], check=True)
+        print(f'Gruppo "{group_name}" created.')
+    except subprocess.CalledProcessError as e:
+        print(f'Errore durante la creazione del gruppo: {e}')
 
 
 def convert_to_word(input_file, output_file):
@@ -484,6 +504,37 @@ Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> bo
         break
     else:
         print("Invalid choice")
+
+while True:
+    choice = int(input("""
+----------------------------------------------------------------------------------
+Do you want create groups: 0 --> yes, 1 --> no
+----------------------------------------------------------------------------------
+    """))
+    if choice == 0:
+        print("yes\n")  # creare implementzioni corrette
+        try:
+            number_of_groups = int(input("how many groups do you want create?"))
+        except:
+            print("you have to insert a integer number")
+        for _ in range(number_of_groups):
+            group_name = input("insert name of the group (same name as the folder): ")
+            while True:
+                u = (input(f"insert name of the members of {group_name} (empty string=exit)"))
+                if len(u) == 0:
+                    print("exit")  # creare implementzioni corrette
+                    break
+                else:
+                    base_setup_content += f'\nadd_member("{u}")\n'
+            base_setup_content += f'\ncreate_group("{group_name}","group_members")\n'
+            base_smb_config_content= base_smb_config_content+ "\n" + "["+ group_name+"]" + "\npath=/sambashare/"+ group_name+ "\npublic=no\nguest ok=no\nread only=no\nvalid users=@"+group_name
+        break    
+    elif choice == 1:
+        print("no")  # creare implementzioni corrette
+        break
+    else:
+        print("Invalid choice")
+
 while True:
     choice = int(input("""
 ----------------------------------------------------------------------------------
