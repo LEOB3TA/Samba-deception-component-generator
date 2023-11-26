@@ -493,11 +493,27 @@ elif "Private" in chosen_type["type"]:
     except:
         print("you have to insert a integer number")
     for _ in range(number_of_user):
-        username = input("insert username: ")
-        password = input(f"insert password for user {username}: ")
-        users.append(username)
-        base_setup_content += f'\ncreate_user("{username}","{password}")\n'
-        base_smb_config_content = base_smb_config_content + "\n" + "[" + username + "]" + "\ncomment = private folder\npath = /sambashare/" + username + "\npublic=no\nguest ok=no\nread only = no\ncreate mask= 0660\n directory mask = 0770\nvalid users = " + username
+        while True:
+            questions = [
+                inquirer.Text(
+                    "username",
+                    message="Insert username",
+                ), inquirer.Password(
+                    "password",
+                    message="Insert password"
+                ), inquirer.Password(
+                    "password_confirm",
+                    message="Confirm password"
+                )
+            ]
+            user = inquirer.prompt(questions)
+            if user["password"] == user["password_confirm"]:
+                break
+            else:
+                print("PASSWORD DO NOT MATCH")
+        users.append(user["username"])
+        base_setup_content += f'\ncreate_user("{user["username"]}","{user["password"]}")\n'
+        base_smb_config_content = base_smb_config_content + "\n" + "[" + user["username"] + "]" + "\ncomment = private folder\npath = /sambashare/" + user["username"] + "\npublic=no\nguest ok=no\nread only = no\ncreate mask= 0660\n directory mask = 0770\nvalid users = " + user["username"]
     base_setup_content += 'make_fs("private")'
 
 elif "Both" in chosen_type["type"]:
@@ -505,11 +521,30 @@ elif "Both" in chosen_type["type"]:
     base_smb_config_content = base_smb_config_content + "\n" + "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
     number_of_user = int(input("how many user do you want create? "))
     for _ in range(number_of_user):
-        username = input("insert username: ")
-        password = input(f"insert password for user {username}: ")
-        users.append(username)
-        base_setup_content += f'\ncreate_user("{username}","{password}")\n'
-        base_smb_config_content = base_smb_config_content + "\n" + "[" + username + "]" + "\ncomment = private folder\npath = /sambashare/" + username + "\npublic=no\nguest ok=no\nread only = no\ncreate mask= 0660\n directory mask = 0770\nvalid users = " + username
+        while True:
+            questions = [
+                inquirer.Text(
+                    "username",
+                    message="Insert username",
+                ), inquirer.Password(
+                    "password",
+                    message="Insert password"
+                ), inquirer.Password(
+                    "password_confirm",
+                    message="Confirm password"
+                )
+            ]
+            user = inquirer.prompt(questions)
+            if user["password"] == user["password_confirm"]:
+                break
+            else:
+                print("PASSWORD DO NOT MATCH")
+        users.append(user["username"])
+        base_setup_content += f'\ncreate_user("{user["username"]}","{user["password"]}")\n'
+        base_smb_config_content = base_smb_config_content + "\n" + "[" + user[
+            "username"] + "]" + "\ncomment = private folder\npath = /sambashare/" + user[
+                                      "username"] + "\npublic=no\nguest ok=no\nread only = no\ncreate mask= 0660\n directory mask = 0770\nvalid users = " + \
+                                  user["username"]
     base_setup_content += 'make_fs("both")'
 
 if "Both" in chosen_type["type"] or "Private" in chosen_type["type"]:
