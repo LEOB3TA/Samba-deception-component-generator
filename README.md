@@ -12,10 +12,14 @@ This repository is dedicated to a powerful tool designed to enhance network secu
 - Clone repository from Github <!--Forse meglio fare una release-->
 ```shell
 git clone https://github.com/LEOB3TA/Samba-deception-component-generator
+cd Samba-deception-component-generator
+```
+- Install the requirements
+```shell
+pip install -r requirements.txt
 ```
 - Run samba_deception_component_generator.py
 ```shell
-cd Samba-deception-component-generator
 python3 samba_deception_component_generator.py
 ```
 - The generated files will be created inside **image** folder
