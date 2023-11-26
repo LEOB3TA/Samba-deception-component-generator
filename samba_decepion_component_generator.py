@@ -568,7 +568,6 @@ if "Both" in chosen_type["type"] or "Private" in chosen_type["type"]:
                 ),
             ]
             chosen_users = inquirer.prompt(question)
-            print(chosen_users)
             for u in chosen_users["users"]:
                 base_setup_content += f'\nadd_member("{u}")\n'
             base_setup_content += f'\ncreate_group("{group_name}","group_members")\n'
