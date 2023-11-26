@@ -4,6 +4,8 @@ import os
 import shutil
 import sys
 import time
+import inquirer
+
 
 base_dockerfile_content = """# Usa l'immagine di Ubuntu 20.04 come base
 FROM ubuntu:20.04
@@ -350,8 +352,9 @@ def create_user(username, password):
 
 def create_group(group_name, list):
     try:
+        base_path='/sambashare/'
         path='/sambashare/'+group_name
-        subprocess.run(['mkdir', '-p', path], check=True)
+        create_and_populate_folder(base_path,group_name)
         subprocess.run(['groupadd', group_name], check=True)
         subprocess.run(['chgrp', group_name,path], check=True)
         subprocess.run(f"chmod -R 770 {path}",shell=True,check=True)
@@ -470,90 +473,82 @@ print(""" _____                    _                  _                         
 """)
 print("This script allows you to create an OCI image for a deception component with a SAMBA server.")
 time.sleep(0.5)
-while True:
-    choice = int(input("""
-----------------------------------------------------------------------------------
-Choose what type of sharing do you prefer: 0 --> public, 1 --> private, 2 --> both
-----------------------------------------------------------------------------------
-    """))
-    if choice == 0:  # change [folder] if you change the folder in samba, other options: guest ok = yes create mask =0775
-        base_smb_config_content = base_smb_config_content + "\n" + "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nwritable = yes\ncreate mask= 0666\n directory mask = 0777"
-        base_setup_content += 'make_fs("public")'
-        break
-    elif choice == 1:
-        try:
-            number_of_user = int(input("how many user do you want create?"))
-        except:
-            print("you have to insert a integer number")
-        for _ in range(number_of_user):
-            username = input("insert username: ")
-            password = input(f"insert password for user {username}: ")
-            base_setup_content += f'\ncreate_user("{username}","{password}")\n'
-            base_smb_config_content = base_smb_config_content + "\n" + "[" + username + "]" + "\ncomment = private folder\npath = /sambashare/" + username + "\npublic=no\nguest ok=no\nread only = no\ncreate mask= 0660\n directory mask = 0770\nvalid users = "+ username
-        base_setup_content += 'make_fs("private")'
-        break
-    elif choice == 2:
-        base_smb_config_content = base_smb_config_content + "\n" + "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
-        number_of_user = int(input("how many user do you want create?"))
-        for _ in range(number_of_user):
-            username = input("insert username: ")
-            password = input(f"insert password for user {username}: ")
-            base_setup_content += f'\ncreate_user("{username}","{password}")\n'
-            base_smb_config_content = base_smb_config_content + "\n" + "[" + username + "]" + "\ncomment = private folder\npath = /sambashare/" + username + "\npublic=no\nguest ok=no\nread only = no\ncreate mask= 0660\n directory mask = 0770\nvalid users = "+ username
-        base_setup_content += 'make_fs("both")'
-        break
-    else:
-        print("Invalid choice")
+questions = [
+    inquirer.List(
+        "type",
+        message="Choose what type of sharing do you prefer",
+        choices=["Public", "Private", "Both"],
+    ),
+]
+chosen_type = inquirer.prompt(questions)
 
-while True:
-    choice = int(input("""
-----------------------------------------------------------------------------------
-Do you want create groups: 0 --> yes, 1 --> no
-----------------------------------------------------------------------------------
-    """))
-    if choice == 0:
-        print("yes\n")  # creare implementzioni corrette
+if "Public" in chosen_type["type"]:
+    base_smb_config_content = base_smb_config_content + "\n" + "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nwritable = yes\ncreate mask= 0666\n directory mask = 0777"
+    base_setup_content += 'make_fs("public")'
+
+elif "Private" in chosen_type["type"]:
+    users = []
+    try:
+        number_of_user = int(input("how many user do you want create? "))
+    except:
+        print("you have to insert a integer number")
+    for _ in range(number_of_user):
+        username = input("insert username: ")
+        password = input(f"insert password for user {username}: ")
+        users.append(username)
+        base_setup_content += f'\ncreate_user("{username}","{password}")\n'
+        base_smb_config_content = base_smb_config_content + "\n" + "[" + username + "]" + "\ncomment = private folder\npath = /sambashare/" + username + "\npublic=no\nguest ok=no\nread only = no\ncreate mask= 0660\n directory mask = 0770\nvalid users = " + username
+    base_setup_content += 'make_fs("private")'
+
+elif "Both" in chosen_type["type"]:
+    users = []
+    base_smb_config_content = base_smb_config_content + "\n" + "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
+    number_of_user = int(input("how many user do you want create? "))
+    for _ in range(number_of_user):
+        username = input("insert username: ")
+        password = input(f"insert password for user {username}: ")
+        users.append(username)
+        base_setup_content += f'\ncreate_user("{username}","{password}")\n'
+        base_smb_config_content = base_smb_config_content + "\n" + "[" + username + "]" + "\ncomment = private folder\npath = /sambashare/" + username + "\npublic=no\nguest ok=no\nread only = no\ncreate mask= 0660\n directory mask = 0770\nvalid users = " + username
+    base_setup_content += 'make_fs("both")'
+
+if "Both" in chosen_type["type"] or "Private" in chosen_type["type"]:
+    questions=[inquirer.List("y_n",
+            message="Do you want create groups",
+            choices=["Yes", "No"]),]
+    group_y_n = inquirer.prompt(questions)
+
+    if "Yes" in group_y_n["y_n"]:
         try:
-            number_of_groups = int(input("how many groups do you want create?"))
+            number_of_groups = int(input("how many groups do you want create? "))
         except:
             print("you have to insert a integer number")
         for _ in range(number_of_groups):
             group_name = input("insert name of the group (same name as the folder): ")
-            while True:
-                u = (input(f"insert name of the members of {group_name} (empty string=exit)"))
-                if len(u) == 0:
-                    print("exit")  # creare implementzioni corrette
-                    break
-                else:
-                    base_setup_content += f'\nadd_member("{u}")\n'
+            question = [
+                inquirer.Checkbox(
+                    "users",
+                    message="Choose group's members (use right arrow to select and left to deselect)",
+                    choices=users,
+                ),
+            ]
+            chosen_users = inquirer.prompt(question)
+            print(chosen_users)
+            for u in chosen_users["users"]:
+                base_setup_content += f'\nadd_member("{u}")\n'
             base_setup_content += f'\ncreate_group("{group_name}","group_members")\n'
-            base_smb_config_content= base_smb_config_content+ "\n" + "["+ group_name+"]" + "\npath=/sambashare/"+ group_name+ "\npublic=no\nguest ok=no\nread only=no\nvalid users=@"+group_name
-        break    
-    elif choice == 1:
-        print("no")  # creare implementzioni corrette
-        break
-    else:
-        print("Invalid choice")
+            base_smb_config_content = base_smb_config_content + "\n" + "[" + group_name + "]" + "\npath=/sambashare/" + group_name + "\npublic=no\nguest ok=no\nread only=no\nvalid users=@" + group_name
 
-while True:
-    choice = int(input("""
-----------------------------------------------------------------------------------
-Do you want LDAP authentication: 0 --> yes, 1 --> no
-----------------------------------------------------------------------------------
-    """))
-    if choice == 0:
-        print("yes\n")  # creare implementzioni corrette
-        IPserverLdap = input("insert IP of LDAP server: ")
-        base_smb_config_content = base_smb_config_content[
-                                  :74] + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=example,dc=org\nldap user suffix = cn=users,cn=accounts\n" + base_smb_config_content[
-                                                                                                                                                                                     74:]
-        # dn = input("insert distinguished name (DN): ")
-        break
-    elif choice == 1:
-        print("no")  # creare implementzioni corrette
-        break
-    else:
-        print("Invalid choice")
+questions=[inquirer.List("y_n",
+            message="Do you want LDAP authentication",
+            choices=["Yes", "No"]),]
+ldap_y_n = inquirer.prompt(questions)
+
+if "Yes" in ldap_y_n["y_n"]:
+    IPserverLdap = input("insert IP of LDAP server: ")
+    base_smb_config_content = base_smb_config_content[
+                              :74] + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=example,dc=org\nldap user suffix = cn=users,cn=accounts\n" + base_smb_config_content[                                                                                                                                                74:]
+    # dn = input("insert distinguished name (DN): ")
 
 if os.path.exists("image"):
     shutil.rmtree("image")
@@ -572,66 +567,46 @@ with open("./image/smb.conf", 'w') as file:
 with open("./image/Dockerfile", 'w') as file:
     file.write(base_dockerfile_content)
 
-while True:
-    choice = int(input("""
-----------------------------------------------------------------------------------
-If you have docker do you want build the image? : 0 --> yes, 1 --> no
-----------------------------------------------------------------------------------
-    """))
-    if choice == 0:
-        image_name = input("insert the name of the image: ")
-        docker_build_command = f"docker build -t {image_name} ./image/"
-        # Run the build command using subprocess
-        try:
-            subprocess.run(docker_build_command, shell=True, check=True)
-            print("Docker image built successfully.")
-        except subprocess.CalledProcessError as e:
-            print(f"Error building Docker image: {e}")
-            sys.exit(1)
-        while True:
-            choice = int(input("""
-----------------------------------------------------------------------------------
-Do you want run the image? : 0 --> yes, 1 --> no
-----------------------------------------------------------------------------------
-            """))
-            if choice == 0:
-                port1 = int(input("Choose the actual port to which you want to map the port 139 of the image. "))
-                port2 = int(input("Choose the actual port to which you want to map the port 445 of the image. "))
-                if platform.system() == "Windows":
-                    docker_run_command = f"START /B docker run -p 127.0.0.1:{port1}:139 -p 127.0.0.1:{port2}:445 {image_name}"
-                else:
-                    docker_run_command = f"docker run -p 127.0.0.1:{port1}:139 -p 127.0.0.1:{port2}:445 {image_name} &"
-                try:
-                    subprocess.run(docker_run_command,shell=True,check=True)
-                    print("Docker image run successfully.")
-                except subprocess.CalledProcessError as e:
-                    print(f"Error running Docker image: {e}")
-                    sys.exit(1)
-                break
-            elif choice == 1:
-                break
-            else:
-                print("Invalid choice")
-        break
-    elif choice == 1:
-        break
-    else:
-        print("Invalid choice")
+questions=[inquirer.List("y_n",
+            message="If you have docker do you want build the image?",
+            choices=["Yes", "No"]),]
+build_y_n = inquirer.prompt(questions)
 
-while True:
-    choice = int(input("""
-----------------------------------------------------------------------------------
-Do you want delete all the created files? : 0 --> yes, 1 --> no
-----------------------------------------------------------------------------------
-    """))
-    if choice == 0:
-        os.sync()
-        shutil.rmtree("image")
-        break
-    elif choice == 1:
-        break
-    else:
-        print("Invalid choice")
+if "Yes" in build_y_n["y_n"]:
+    image_name = input("insert the name of the image: ")
+    docker_build_command = f"docker build -t {image_name} ./image/"
+    # Run the build command using subprocess
+    try:
+        subprocess.run(docker_build_command, shell=True, check=True)
+        print("Docker image built successfully.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error building Docker image: {e}")
+        sys.exit(1)
+    questions = [inquirer.List("y_n",
+                               message="Do you want run the image?",
+                               choices=["Yes", "No"]), ]
+    run_y_n = inquirer.prompt(questions)
+    if "Yes" in run_y_n["y_n"]:
+        port1 = int(input("Choose the actual port to which you want to map the port 139 of the image. "))
+        port2 = int(input("Choose the actual port to which you want to map the port 445 of the image. "))
+        if platform.system() == "Windows":
+            docker_run_command = f"START /B docker run -p 127.0.0.1:{port1}:139 -p 127.0.0.1:{port2}:445 {image_name}"
+        else:
+            docker_run_command = f"docker run -p 127.0.0.1:{port1}:139 -p 127.0.0.1:{port2}:445 {image_name} &"
+        try:
+            subprocess.run(docker_run_command, shell=True, check=True)
+            print("Docker image run successfully.")
+        except subprocess.CalledProcessError as e:
+            print(f"Error running Docker image: {e}")
+            sys.exit(1)
+
+questions=[inquirer.List("y_n",
+            message="Do you want delete all the created files?",
+            choices=["Yes", "No"]),]
+delete_y_n = inquirer.prompt(questions)
+if "Yes" in build_y_n["y_n"]:
+    os.sync()
+    shutil.rmtree("image")
 
 print("""
 ----------------------------------------------------------------------------------
