@@ -600,7 +600,7 @@ with open("./image/smb.conf", 'w') as file:
 # write the Dockerfile file
 with open("./image/Dockerfile", 'w') as file:
     file.write(base_dockerfile_content)
-    os.sync()
+
 questions=[inquirer.List("y_n",
             message="If you have docker do you want build the image?",
             choices=["Yes", "No"]),]
@@ -638,7 +638,8 @@ questions=[inquirer.List("y_n",
             message="Do you want delete all the created files?",
             choices=["Yes", "No"]),]
 delete_y_n = inquirer.prompt(questions)
-if "Yes" in build_y_n["y_n"]:
+if "Yes" in delete_y_n["y_n"]:
+    os.sync()
     shutil.rmtree("image")
 
 print("""
