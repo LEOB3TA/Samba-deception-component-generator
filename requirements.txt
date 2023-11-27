@@ -1,10 +1,7 @@
 # requirements.txt
 
 # platform for OS information
-platform==1.0.10
-
-# subprocess for code execution
-subprocess==3.10.0
+lib_platform
 
 # inquirer for CLI
-inquirer==3.4.3
+inquirer
