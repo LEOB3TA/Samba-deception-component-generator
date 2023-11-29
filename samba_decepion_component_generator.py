@@ -40,7 +40,8 @@ EXPOSE 139 445
 
 # Avvia il servizio Samba quando il contenitore viene avviato
 RUN service smbd restart
-CMD ["smbd", "--foreground", "--no-process-group"]"""
+CMD ["smbd", "--foreground", "--no-process-group"]
+CMD tail -f /dev/null"""
 
 base_smb_config_content = """#======================= Global Settings =======================
 
@@ -584,10 +585,10 @@ if "Yes" in ldap_y_n["y_n"]:
                               :74] + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=example,dc=org\nldap user suffix = cn=users,cn=accounts\n" + base_smb_config_content[                                                                                                                                                74:]
     # dn = input("insert distinguished name (DN): ")
 
-if os.path.exists("./image"):
-    shutil.rmtree("./image")
+if os.path.exists("image"):
+    shutil.rmtree("image")
 
-os.mkdir("./image")
+os.mkdir("image")
 
 # write the setup file
 with open("./image/setup.py", 'w') as file:
@@ -623,7 +624,7 @@ if "Yes" in build_y_n["y_n"]:
     if "Yes" in run_y_n["y_n"]:
         port1 = int(input("Choose the actual port to which you want to map the port 139 of the image. "))
         port2 = int(input("Choose the actual port to which you want to map the port 445 of the image. "))
-        if lib_platform.is_platform_windows:
+        if lib_platform.is_platform_windows == True:
             docker_run_command = f"START /B docker run -p 127.0.0.1:{port1}:139 -p 127.0.0.1:{port2}:445 {image_name}"
         else:
             docker_run_command = f"docker run -p 127.0.0.1:{port1}:139 -p 127.0.0.1:{port2}:445 {image_name} &"
@@ -638,7 +639,7 @@ questions=[inquirer.List("y_n",
             message="Do you want delete all the created files?",
             choices=["Yes", "No"]),]
 delete_y_n = inquirer.prompt(questions)
-if "Yes" in delete_y_n["y_n"]:
+if "Yes" in build_y_n["y_n"]:
     os.sync()
     shutil.rmtree("image")
 
