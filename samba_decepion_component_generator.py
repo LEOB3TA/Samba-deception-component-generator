@@ -40,8 +40,7 @@ EXPOSE 139 445
 
 # Avvia il servizio Samba quando il contenitore viene avviato
 RUN service smbd restart
-CMD ["smbd", "--foreground", "--no-process-group"]
-CMD tail -f /dev/null"""
+CMD ["smbd", "--foreground", "--no-process-group"]"""
 
 base_smb_config_content = """#======================= Global Settings =======================
 
@@ -624,7 +623,7 @@ if "Yes" in build_y_n["y_n"]:
     if "Yes" in run_y_n["y_n"]:
         port1 = int(input("Choose the actual port to which you want to map the port 139 of the image. "))
         port2 = int(input("Choose the actual port to which you want to map the port 445 of the image. "))
-        if lib_platform.is_platform_windows == True:
+        if lib_platform.is_platform_windows:
             docker_run_command = f"START /B docker run -p 127.0.0.1:{port1}:139 -p 127.0.0.1:{port2}:445 {image_name}"
         else:
             docker_run_command = f"docker run -p 127.0.0.1:{port1}:139 -p 127.0.0.1:{port2}:445 {image_name} &"
