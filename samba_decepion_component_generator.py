@@ -585,10 +585,10 @@ if "Yes" in ldap_y_n["y_n"]:
                               :74] + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=example,dc=org\nldap user suffix = cn=users,cn=accounts\n" + base_smb_config_content[                                                                                                                                                74:]
     # dn = input("insert distinguished name (DN): ")
 
-if os.path.exists("image"):
-    shutil.rmtree("image")
+if os.path.exists("./image"):
+    shutil.rmtree("./image")
 
-os.mkdir("image")
+os.mkdir("./image")
 
 # write the setup file
 with open("./image/setup.py", 'w') as file:
@@ -639,7 +639,7 @@ questions=[inquirer.List("y_n",
             message="Do you want delete all the created files?",
             choices=["Yes", "No"]),]
 delete_y_n = inquirer.prompt(questions)
-if "Yes" in build_y_n["y_n"]:
+if "Yes" in delete_y_n["y_n"]:
     os.sync()
     shutil.rmtree("image")
 
