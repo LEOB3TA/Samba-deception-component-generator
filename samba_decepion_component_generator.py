@@ -579,9 +579,9 @@ questions=[inquirer.List("y_n",
 ldap_y_n = inquirer.prompt(questions)
 
 if "Yes" in ldap_y_n["y_n"]:
-    IPserverLdap = input("insert IP of LDAP server: ")
+    IPserverLdap = input("Insert IP or address of LDAP server (ldap01.example.com): ")
     base_smb_config_content = base_smb_config_content[
-                              :74] + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=example,dc=org\nldap user suffix = cn=users,cn=accounts\n" + base_smb_config_content[                                                                                                                                                74:]
+                              :74] + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=example,dc=com\nldap user suffix = cn=users,cn=accounts\nldap group suffix = ou=groups\nldap machine suffix = ou=computers" + base_smb_config_content[                                                                                                                                                74:]
     # dn = input("insert distinguished name (DN): ")
 
 if os.path.exists("image"):
