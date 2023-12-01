@@ -638,7 +638,7 @@ questions=[inquirer.List("y_n",
             message="Do you want delete all the created files?",
             choices=["Yes", "No"]),]
 delete_y_n = inquirer.prompt(questions)
-if "Yes" in build_y_n["y_n"]:
+if "Yes" in delete_y_n["y_n"]:
     os.sync()
     shutil.rmtree("image")
 
