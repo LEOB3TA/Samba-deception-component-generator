@@ -14,11 +14,12 @@ FROM ubuntu:20.04
 RUN apt-get update && \\
  apt-get install -y samba && \\
  apt-get install -y smbldap-tools && \\
+ apt-get install -y sssd-ldap && \\
             apt-get install -y pandoc && \\
             apt-get install -y texlive-latex-base && \\
             apt-get install -y texlive-fonts-recommended && \\
             apt-get install -y texlive-fonts-extra && \\
-          #  apt-get install -y texlive-latex-extra && \\
+            apt-get install -y texlive-latex-extra && \\
             apt-get clean && \\
             rm -rf /var/lib/apt/lists/*
 
@@ -33,6 +34,7 @@ RUN apt-get remove -y pandoc && \\
 
 # Copia il file di configurazione di Samba nella posizione corretta
 COPY smb.conf /etc/samba/smb.conf
+COPY sssd.conf /etc/sssd/sssd.conf
 
 
 # Esponi le porte necessarie per Samba
@@ -41,6 +43,7 @@ EXPOSE 139 445
 
 # Avvia il servizio Samba quando il contenitore viene avviato
 RUN service smbd restart
+RUN systemctl start sssd
 CMD ["smbd", "--foreground", "--no-process-group"]"""
 
 base_smb_config_content = """#======================= Global Settings =======================
@@ -261,6 +264,8 @@ security = user
 # Please note that you also need to set appropriate Unix permissions
 # to the drivers directory for these users to have write rights in it
 ;   write l"""
+
+sssd_content="[sssd]\n"
 
 base_setup_content = """import subprocess
 import random
@@ -597,12 +602,14 @@ if "Yes" in ldap_y_n["y_n"]:
         smb_conf_admin= smb_conf_admin+"ldap admin dn = "+cn_admin+",dc="+dc1_admin+",dc="+dc2_admin+"\n"
     ssl=[inquirer.List("y_n",message="Do you want to use SSL?",choices=["Yes", "No"]),]
     ssl = inquirer.prompt(ssl)
+    ssl_conf=""
     if "Yes" in ssl["y_n"]:
         ssl_conf="ldap ssl = start tls\n"
 
-
     base_smb_config_content = base_smb_config_content[:74] + "\n"+ "workgroup = "+ workgroup +"\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc="+suff1+",dc="+ suff2+"\nldap user suffix = ou=people\nldap group suffix = ou=groups\nldap machine suffix = ou=computers\n"+ smb_conf_admin +ssl_conf+ base_smb_config_content[74:]
-    # dn = input("insert distinguished name (DN): ")
+    # sssd configuration
+    domain=suff1+"."+ suff2
+    sssd_content=sssd_content+ "config_file_version = 2\ndomains = "+domain+"\n\n[domain/"+domain+"]\nid_provider = ldap\nauth_provider = ldap\nldap_uri = ldap://"+IPserverLdap+"\ncache_credentials = True\nldap_search_base = dc="+suff1+",dc="+suff2
 
 if os.path.exists("./image"):
     shutil.rmtree("./image")
@@ -620,6 +627,10 @@ with open("./image/smb.conf", 'w') as file:
 # write the Dockerfile file
 with open("./image/Dockerfile", 'w') as file:
     file.write(base_dockerfile_content)
+
+# write the sssd conf file
+with open("./image/sssd.conf", 'w') as file:
+    file.write(sssd_content)
 
 questions=[inquirer.List("y_n",
             message="If you have docker do you want build the image?",
