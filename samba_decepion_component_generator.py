@@ -40,8 +40,7 @@ EXPOSE 139 445
 
 # Avvia il servizio Samba quando il contenitore viene avviato
 RUN service smbd restart
-CMD ["smbd", "--foreground", "--no-process-group"]
-CMD tail -f /dev/null"""
+CMD ["smbd", "--foreground", "--no-process-group"]"""
 
 base_smb_config_content = """#======================= Global Settings =======================
 
@@ -580,9 +579,9 @@ questions=[inquirer.List("y_n",
 ldap_y_n = inquirer.prompt(questions)
 
 if "Yes" in ldap_y_n["y_n"]:
-    IPserverLdap = input("insert IP of LDAP server: ")
+    IPserverLdap = input("Insert IP or address of LDAP server (ldap01.example.com): ")
     base_smb_config_content = base_smb_config_content[
-                              :74] + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=example,dc=org\nldap user suffix = cn=users,cn=accounts\n" + base_smb_config_content[                                                                                                                                                74:]
+                              :74] + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=example,dc=com\nldap user suffix = cn=users,cn=accounts\nldap group suffix = ou=groups\nldap machine suffix = ou=computers" + base_smb_config_content[                                                                                                                                                74:]
     # dn = input("insert distinguished name (DN): ")
 
 if os.path.exists("./image"):
@@ -624,7 +623,7 @@ if "Yes" in build_y_n["y_n"]:
     if "Yes" in run_y_n["y_n"]:
         port1 = int(input("Choose the actual port to which you want to map the port 139 of the image. "))
         port2 = int(input("Choose the actual port to which you want to map the port 445 of the image. "))
-        if lib_platform.is_platform_windows == True:
+        if lib_platform.is_platform_windows:
             docker_run_command = f"START /B docker run -p 127.0.0.1:{port1}:139 -p 127.0.0.1:{port2}:445 {image_name}"
         else:
             docker_run_command = f"docker run -p 127.0.0.1:{port1}:139 -p 127.0.0.1:{port2}:445 {image_name} &"
