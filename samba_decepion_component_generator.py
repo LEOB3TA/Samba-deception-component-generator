@@ -13,6 +13,7 @@ FROM ubuntu:20.04
 # Aggiorna il repository degli apt e installa Samba
 RUN apt-get update && \\
  apt-get install -y samba && \\
+ apt-get install -y smbldap-tools && \\
             apt-get install -y pandoc && \\
             apt-get install -y texlive-latex-base && \\
             apt-get install -y texlive-fonts-recommended && \\
@@ -45,14 +46,16 @@ CMD ["smbd", "--foreground", "--no-process-group"]"""
 base_smb_config_content = """#======================= Global Settings =======================
 
 [global]
-
+log level = 3 passdb:5 auth:5
+client min protocol = NT1
+client max protocol = SMB3 
+security = user
+   
 ## Browsing/Identification ###
 
 # Change this to the workgroup/NT-domain name your Samba server will part of
    workgroup = WORKGROUP
-   client min protocol = NT1
-   client max protocol = SMB3 
-   security = user
+   
 #### Networking ####
 
 # The specific set of interfaces / networks to bind to
@@ -342,8 +345,10 @@ def add_member(member):
 def create_user(username, password):
     try:
         # Creare un nuovo utente
-        subprocess.run(['useradd', '-m', '-p', password, username], check=True)
+        subprocess.run(['useradd', username], check=True)
         command = f'(echo "{password}"; echo "{password}")  | smbpasswd -s -a "{username}"'
+        subprocess.run(command, shell=True, check=True)
+        command = f'(echo "{password}";echo "{password}") | passwd "{username}"'
         subprocess.run(command, shell=True, check=True)
         print(f'Utente "{username}" created.')
         users.append(username)
@@ -419,7 +424,6 @@ def make_fs(type):
             subprocess.run(f"chgrp -R {user} {base_user_path}",shell=True,check=True)
             subprocess.run(f"chmod -R 770 {base_user_path}",shell=True,check=True)
 """
-
 
 def build_docker_image(image_name, dockerfile_path='.', build_args=None):
     """
