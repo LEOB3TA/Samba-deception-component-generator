@@ -584,8 +584,24 @@ ldap_y_n = inquirer.prompt(questions)
 
 if "Yes" in ldap_y_n["y_n"]:
     IPserverLdap = input("Insert IP or address of LDAP server (ldap01.example.com): ")
-    base_smb_config_content = base_smb_config_content[
-                              :74] + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=example,dc=com\nldap user suffix = cn=users,cn=accounts\nldap group suffix = ou=groups\nldap machine suffix = ou=computers" + base_smb_config_content[                                                                                                                                                74:]
+    workgroup=input("Insert the workgroup: ")
+    suff1=input("Insert the first ldap suffix (base for all ldap suffixes and for storing the sambaDomain object): ")
+    suff2=input("Insert the second ldap suffix (base for all ldap suffixes and for storing the sambaDomain object): ")
+    questions=[inquirer.List("y_n",message="Do you want to add a ldap admin Distinguished Name (DN)?",choices=["Yes", "No"]),]
+    admin_dn = inquirer.prompt(questions)
+    smb_conf_admin=""
+    if "Yes" in admin_dn["y_n"]:
+        cn_admin = input("Insert cn: ")
+        dc1_admin = input("Insert first dc: ")
+        dc2_admin = input("Insert second dc: ")
+        smb_conf_admin= smb_conf_admin+"ldap admin dn = "+cn_admin+",dc="+dc1_admin+",dc="+dc2_admin+"\n"
+    ssl=[inquirer.List("y_n",message="Do you want to use SSL?",choices=["Yes", "No"]),]
+    ssl = inquirer.prompt(ssl)
+    if "Yes" in ssl["y_n"]:
+        ssl_conf="ldap ssl = start tls\n"
+
+
+    base_smb_config_content = base_smb_config_content[:74] + "\n"+ "workgroup = "+ workgroup +"\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc="+suff1+",dc="+ suff2+"\nldap user suffix = ou=people\nldap group suffix = ou=groups\nldap machine suffix = ou=computers\n"+ smb_conf_admin +ssl_conf+ base_smb_config_content[74:]
     # dn = input("insert distinguished name (DN): ")
 
 if os.path.exists("./image"):
