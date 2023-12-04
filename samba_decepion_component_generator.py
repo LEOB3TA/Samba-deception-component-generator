@@ -43,12 +43,14 @@ EXPOSE 139 445
 
 # Avvia il servizio Samba quando il contenitore viene avviato
 RUN service smbd restart
-RUN systemctl start sssd
+RUN service sssd start
 CMD ["smbd", "--foreground", "--no-process-group"]"""
 
 base_smb_config_content = """#======================= Global Settings =======================
 
 [global]
+encrypt passwords = yes
+smb encrypt = mandatory
 log level = 3 passdb:5 auth:5
 client min protocol = NT1
 client max protocol = SMB3 
