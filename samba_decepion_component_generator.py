@@ -49,7 +49,6 @@ CMD ["smbd", "--foreground", "--no-process-group"]"""
 base_smb_config_content = """#======================= Global Settings =======================
 
 [global]
-encrypt passwords = yes
 smb encrypt = mandatory
 log level = 3 passdb:5 auth:5
 client min protocol = NT1
