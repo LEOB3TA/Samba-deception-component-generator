@@ -492,7 +492,6 @@ def build_docker_image(image_name, dockerfile_path='.', build_args=None):
     except Exception as e:
         print(f"An error occurred: {e}")
 
-
 print(""" _____                    _                  _                          _    _                                                                          _                                           _               
 /  ___|                  | |                | |                        | |  (_)                                                                        | |                                         | |              
 \ `--.   __ _  _ __ ___  | |__    __ _    __| |  ___   ___  ___  _ __  | |_  _   ___   _ __     ___  ___   _ __ ___   _ __    ___   _ __    ___  _ __  | |_    __ _   ___  _ __    ___  _ __  __ _ | |_  ___   _ __ 
@@ -546,13 +545,11 @@ elif "Private" in chosen_type["type"]:
         ssl_conf = ""
         if "Yes" in ssl["y_n"]:
             ssl_conf = "ldap ssl = start tls\n"
-
-        base_smb_config_content = base_smb_config_content[
-                                  :74] + "\n" + "workgroup = " + workgroup + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=" + suff1 + ",dc=" + suff2 + "\nldap user suffix = ou=people\nldap group suffix = ou=groups\nldap machine suffix = ou=computers\n" + smb_conf_admin + ssl_conf + base_smb_config_content[
-                                                                                                                                                                                                                                                                                                                             74:]
+        base_smb_config_content = base_smb_config_content[:74] + "\n" + "workgroup = " + workgroup + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=" + suff1 + ",dc=" + suff2 + "\nldap user suffix = ou=mathematicians\nldap group suffix = ou=groups\nldap machine suffix = ou=computers\n" + smb_conf_admin + ssl_conf + base_smb_config_content[74:]
         # sssd configuration
         domain = suff1 + "." + suff2
-        sssd_content = sssd_content + "config_file_version = 2\ndomains = " + domain + "\n\n[domain/" + domain + "]\nid_provider = ldap\nauth_provider = ldap\nldap_uri = ldap://" + IPserverLdap + "\ncache_credentials = True\nldap_search_base = dc=" + suff1 + ",dc=" + suff2
+        sssd_content += "config_file_version = 2\ndomains = " + domain + "\n\n[domain/" + domain + "]\nid_provider = ldap\nauth_provider = ldap\nldap_uri = ldap://" + IPserverLdap + "\ncache_credentials = True\nldap_search_base = dc=" + suff1 + ",dc=" + suff2
+    if "Yes" in ldap_y_n["y_n"]:
         users = []
         try:
             number_of_user = int(input("How many users need to authenticate within the system using LDAP?"))
@@ -627,10 +624,8 @@ elif "Both" in chosen_type["type"]:
         ssl_conf = ""
         if "Yes" in ssl["y_n"]:
             ssl_conf = "ldap ssl = start tls\n"
-
         base_smb_config_content = base_smb_config_content[
-                                  :74] + "\n" + "workgroup = " + workgroup + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=" + suff1 + ",dc=" + suff2 + "\nldap user suffix = ou=people\nldap group suffix = ou=groups\nldap machine suffix = ou=computers\n" + smb_conf_admin + ssl_conf + base_smb_config_content[
-                                                                                                                                                                                                                                                                                                                             74:]
+        :74] + "\n" + "workgroup = " + workgroup + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=" + suff1 + ",dc=" + suff2 + "\nldap user suffix = ou=people\nldap group suffix = ou=groups\nldap machine suffix = ou=computers\n" + smb_conf_admin + ssl_conf +base_smb_config_content[74:]
         # sssd configuration
         domain = suff1 + "." + suff2
         sssd_content = sssd_content + "config_file_version = 2\ndomains = " + domain + "\n\n[domain/" + domain + "]\nid_provider = ldap\nauth_provider = ldap\nldap_uri = ldap://" + IPserverLdap + "\ncache_credentials = True\nldap_search_base = dc=" + suff1 + ",dc=" + suff2
@@ -714,6 +709,7 @@ if "Both" in chosen_type["type"] or "Private" in chosen_type["type"]:
         for _ in range(number_of_groups):
             group_name = input("insert name of the group (same name as the folder): ")
             base_setup_content += f'\ncreate_ldap_group_folder("{group_name}")\n'
+            base_smb_config_content = base_smb_config_content + "\n" + "[" + group_name + "]" + "\npath=/sambashare/" + group_name + "\npublic=no\nguest ok=no\nread only=no\nvalid users=@" + group_name
 
 if os.path.exists("./image"):
     shutil.rmtree("./image")
