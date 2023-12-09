@@ -5,6 +5,8 @@ import shutil
 import sys
 import time
 import inquirer
+import socket
+
 
 
 base_dockerfile_content = """# Usa l'immagine di Ubuntu 20.04 come base
@@ -431,6 +433,19 @@ def make_fs(type):
             subprocess.run(f"chmod -R 770 {base_user_path}",shell=True,check=True)
 """
 
+def get_local_ip_address():
+    try:
+        # Get the machine's hostname
+        host_name = socket.gethostname()
+
+        # Get the IP address associated with the hostname
+        ip_address = socket.gethostbyname(host_name)
+
+        return ip_address
+    except socket.error as e:
+        print(f"Error in obtaining the local IP address: {e}")
+        return None
+
 def build_docker_image(image_name, dockerfile_path='.', build_args=None):
     """
      Build a Docker image from a specified Dockerfile using subprocess.
@@ -655,13 +670,15 @@ if "Yes" in build_y_n["y_n"]:
     if "Yes" in run_y_n["y_n"]:
         port1 = int(input("Choose the actual port to which you want to map the port 139 of the image. "))
         port2 = int(input("Choose the actual port to which you want to map the port 445 of the image. "))
+        ip_address=get_local_ip_address()
         if lib_platform.is_platform_windows:
-            docker_run_command = f"START /B docker run -p 127.0.0.1:{port1}:139 -p 127.0.0.1:{port2}:445 {image_name}"
+            docker_run_command = f"START /B docker run -p {ip_address}:{port1}:139 -p {ip_address}:{port2}:445 {image_name}"
         else:
-            docker_run_command = f"docker run -p 127.0.0.1:{port1}:139 -p 127.0.0.1:{port2}:445 {image_name} &"
+            docker_run_command = f"docker run -p {ip_address}:{port1}:139 -p {ip_address}:{port2}:445 {image_name} &"
         try:
             subprocess.run(docker_run_command, shell=True, check=True)
             print("Docker image run successfully.")
+            print(f"\n\nPORT MAPPING: {ip_address}:{port1}-->139\t{ip_address}:{port2}-->445\n\n")
         except subprocess.CalledProcessError as e:
             print(f"Error running Docker image: {e}")
             sys.exit(1)
