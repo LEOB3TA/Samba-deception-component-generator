@@ -17,6 +17,7 @@ RUN apt-get update && \\
  apt-get install -y samba && \\
  apt-get install -y smbldap-tools && \\
  apt-get install -y sssd-ldap && \\
+ apt-get install -y ldap-utils && \\
             apt-get install -y pandoc && \\
             apt-get install -y texlive-latex-base && \\
             apt-get install -y texlive-fonts-recommended && \\
