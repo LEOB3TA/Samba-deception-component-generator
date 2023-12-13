@@ -7,7 +7,18 @@ import time
 import inquirer
 import socket
 
+base_start_content = """
+#!/bin/bash
 
+# Avvia il servizio sssd
+service sssd start &
+
+# Riavvia il servizio smbd
+service smbd restart &
+
+# Avvia smbd in foreground senza creare un nuovo gruppo di processi
+smbd --foreground --no-process-group
+"""
 
 base_dockerfile_content = """# Usa l'immagine di Ubuntu 20.04 come base
 FROM ubuntu:20.04
@@ -24,7 +35,6 @@ RUN apt-get update && \\
             apt-get install -y texlive-fonts-extra && \\
             apt-get install -y texlive-latex-extra && \\
             apt-get clean && \\
-            rm -rf /var/lib/apt/lists/*
 
 #Copia il file setup.py e lo esegue
 COPY setup.py /
@@ -38,6 +48,10 @@ RUN apt-get remove -y pandoc && \\
 # Copia il file di configurazione di Samba nella posizione corretta
 COPY smb.conf /etc/samba/smb.conf
 COPY sssd.conf /etc/sssd/sssd.conf
+RUN chmod 0600 /etc/sssd/sssd.conf
+COPY start.sh /start.sh
+RUN chmod +x start.sh
+
 
 
 # Esponi le porte necessarie per Samba
@@ -45,9 +59,7 @@ EXPOSE 139 445
 
 
 # Avvia il servizio Samba quando il contenitore viene avviato
-RUN service smbd restart
-RUN service sssd start
-CMD ["smbd", "--foreground", "--no-process-group"]"""
+CMD /start.sh"""
 
 base_smb_config_content = """#======================= Global Settings =======================
 
@@ -455,6 +467,7 @@ def get_local_ip_address():
         print(f"Error in obtaining the local IP address: {e}")
         return None
 
+
 def build_docker_image(image_name, dockerfile_path='.', build_args=None):
     """
      Build a Docker image from a specified Dockerfile using subprocess.
@@ -517,7 +530,7 @@ chosen_type = inquirer.prompt(questions)
 
 if "Public" in chosen_type["type"]:
     base_smb_config_content = base_smb_config_content + "\n" + "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nwritable = yes\ncreate mask= 0666\n directory mask = 0777"
-    base_setup_content += 'make_fs("public")'
+    base_setup_content += 'make_fs("public",False)'
 
 elif "Private" in chosen_type["type"]:
     questions = [inquirer.List("y_n",
@@ -717,16 +730,20 @@ if os.path.exists("./image"):
 
 os.mkdir("./image")
 
+#write start.sh
+with open("image/start.sh", 'w') as file:
+    file.write(base_start_content)
+
 # write the setup file
-with open("./image/setup.py", 'w') as file:
+with open("image/setup.py", 'w') as file:
     file.write(base_setup_content)
 
 # write smb.conf file
-with open("./image/smb.conf", 'w') as file:
+with open("image/smb.conf", 'w') as file:
     file.write(base_smb_config_content)
 
 # write the Dockerfile file
-with open("./image/Dockerfile", 'w') as file:
+with open("image/Dockerfile", 'w') as file:
     file.write(base_dockerfile_content)
 
 # write the sssd conf file
