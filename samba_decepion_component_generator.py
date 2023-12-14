@@ -10,9 +10,6 @@ import socket
 base_start_content = """
 #!/bin/bash
 
-# Avvia il servizio sssd
-service sssd start &
-
 # Riavvia il servizio smbd
 service smbd restart &
 
@@ -25,30 +22,18 @@ FROM ubuntu:20.04
 
 # Aggiorna il repository degli apt e installa Samba
 RUN apt-get update && \\
- apt-get install -y samba && \\
- apt-get install -y smbldap-tools && \\
- apt-get install -y sssd-ldap && \\
- apt-get install -y ldap-utils && \\
-            apt-get install -y pandoc && \\
-            apt-get install -y texlive-latex-base && \\
-            apt-get install -y texlive-fonts-recommended && \\
-            apt-get install -y texlive-fonts-extra && \\
-            apt-get install -y texlive-latex-extra && \\
+ apt-get install -y samba winbind libnss-winbind krb5-user smbclient ldb-tools python3-cryptography
+            apt-get install -y pandoc texlive-latex-base texlive-fonts-recommended texlive-fonts-extra texlive-latex-extra && \\
             apt-get clean 
 
 #Copia il file setup.py e lo esegue
 COPY setup.py /
 RUN python3 /setup.py && rm /setup.py
 
-RUN apt-get remove -y pandoc && \\
-    apt-get remove -y texlive-latex-base && \\
-    apt-get remove -y texlive-fonts-recommended && \\
-    apt-get remove -y texlive-fonts-extra
+RUN apt-get remove -y pandoc texlive-latex-base texlive-fonts-recommended texlive-fonts-extra
 
 # Copia il file di configurazione di Samba nella posizione corretta
 COPY smb.conf /etc/samba/smb.conf
-COPY sssd.conf /etc/sssd/sssd.conf
-RUN chmod 0600 /etc/sssd/sssd.conf
 COPY start.sh /start.sh
 RUN chmod +x start.sh
 
@@ -280,8 +265,6 @@ security = user
 # Please note that you also need to set appropriate Unix permissions
 # to the drivers directory for these users to have write rights in it
 ;   write l"""
-
-sssd_content="[sssd]\n"
 
 base_setup_content = """import subprocess
 import random
@@ -560,9 +543,6 @@ elif "Private" in chosen_type["type"]:
         if "Yes" in ssl["y_n"]:
             ssl_conf = "ldap ssl = start tls\n"
         base_smb_config_content = base_smb_config_content[:74] + "\n" + "workgroup = " + workgroup + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=" + suff1 + ",dc=" + suff2 + "\nldap user suffix = ou=mathematicians\nldap group suffix = ou=groups\nldap machine suffix = ou=computers\n" + smb_conf_admin + ssl_conf + base_smb_config_content[74:]
-        # sssd configuration
-        domain = suff1 + "." + suff2
-        sssd_content += "config_file_version = 2\ndomains = " + domain + "\n\n[domain/" + domain + "]\nid_provider = ldap\nauth_provider = ldap\nldap_uri = ldap://" + IPserverLdap + "\ncache_credentials = True\nldap_search_base = dc=" + suff1 + ",dc=" + suff2
     if "Yes" in ldap_y_n["y_n"]:
         users = []
         try:
@@ -640,9 +620,6 @@ elif "Both" in chosen_type["type"]:
             ssl_conf = "ldap ssl = start tls\n"
         base_smb_config_content = base_smb_config_content[
         :74] + "\n" + "workgroup = " + workgroup + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=" + suff1 + ",dc=" + suff2 + "\nldap user suffix = ou=people\nldap group suffix = ou=groups\nldap machine suffix = ou=computers\n" + smb_conf_admin + ssl_conf +base_smb_config_content[74:]
-        # sssd configuration
-        domain = suff1 + "." + suff2
-        sssd_content = sssd_content + "config_file_version = 2\ndomains = " + domain + "\n\n[domain/" + domain + "]\nid_provider = ldap\nauth_provider = ldap\nldap_uri = ldap://" + IPserverLdap + "\ncache_credentials = True\nldap_search_base = dc=" + suff1 + ",dc=" + suff2
         users = []
         try:
             number_of_user = int(input("How many users need to authenticate within the system using LDAP?"))
@@ -745,10 +722,6 @@ with open("image/smb.conf", 'w') as file:
 # write the Dockerfile file
 with open("image/Dockerfile", 'w') as file:
     file.write(base_dockerfile_content)
-
-# write the sssd conf file
-with open("./image/sssd.conf", 'w') as file:
-    file.write(sssd_content)
 
 questions=[inquirer.List("y_n",
             message="If you have docker do you want build the image?",
