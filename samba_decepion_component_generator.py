@@ -34,7 +34,7 @@ RUN apt-get update && \\
             apt-get install -y texlive-fonts-recommended && \\
             apt-get install -y texlive-fonts-extra && \\
             apt-get install -y texlive-latex-extra && \\
-            apt-get clean && \\
+            apt-get clean 
 
 #Copia il file setup.py e lo esegue
 COPY setup.py /
