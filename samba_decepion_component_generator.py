@@ -167,16 +167,21 @@ def create_user(username, password,ldap=False):
     except subprocess.CalledProcessError as e:
         print(f'Errore durante la creazione dell\\'utente: {e}')
 
-def create_group(group_name, group_members):
+def create_group(group_name, group_members,ldap=False):
     try:
         base_path='/sambashare/'
         path='/sambashare/'+group_name
         create_and_populate_folder(base_path,group_name)
-        subprocess.run(['groupadd', group_name], check=True)
-        subprocess.run(['chgrp', group_name,path], check=True)
-        subprocess.run(f"chmod -R 770 {path}",shell=True,check=True)
-        for m in group_members:
-            subprocess.run(f'usermod -a -G {group_name} {m}',shell=True, check=True)
+        if not ldap:
+            subprocess.run(['groupadd', group_name], check=True)
+            subprocess.run(['chgrp', group_name,path], check=True)
+            subprocess.run(f"chmod -R 770 {path}",shell=True,check=True)
+            for m in group_members:
+                subprocess.run(f'usermod -a -G {group_name} {m}',shell=True, check=True)
+        else:
+            subprocess.run(f'samba-tool group add {group_name}',shell=True, check=True)
+            for m in group_members:
+                subprocess.run(f'samba-tool group addmembers {group_name} {m}',shell=True, check=True)
         print(f'Gruppo "{group_name}" created.')
         group_members.clear()
     except subprocess.CalledProcessError as e:
@@ -431,7 +436,7 @@ service samba-ad-dc start
                                  choices=["Yes", "No"]),]
         group_y_n = inquirer.prompt(questions)
 
-        if "Yes" in group_y_n["y_n"]: ##TODO verificare il funzionamento in LDAP
+        if "Yes" in group_y_n["y_n"]:
             try:
                 number_of_groups = int(input("how many groups do you want create? "))
             except:
@@ -448,7 +453,7 @@ service samba-ad-dc start
                 chosen_users = inquirer.prompt(question)
                 for u in chosen_users["users"]:
                     base_setup_content += f'\nadd_member("{u}")\n'
-                base_setup_content += f'\ncreate_group("{group_name}",group_members)\n'
+                base_setup_content += f'\ncreate_group("{group_name}",group_members,True)\n'
                 base_setup_content += (f'modify_samba_conf("Group","{group_name}")\n')
     base_setup_content += f'kinit_user("administrator","{ldap["password"]}")'
 ##### END OF LDAP SECTION
