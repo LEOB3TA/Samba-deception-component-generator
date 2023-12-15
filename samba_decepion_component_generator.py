@@ -6,6 +6,7 @@ import sys
 import time
 import inquirer
 import socket
+import re
 
 base_start_content = """
 #!/bin/bash
@@ -22,7 +23,7 @@ FROM ubuntu:20.04
 
 # Aggiorna il repository degli apt e installa Samba
 RUN apt-get update && \\
- apt-get install -y samba winbind libnss-winbind krb5-user smbclient ldb-tools python3-cryptography
+ apt-get install -y samba winbind libnss-winbind krb5-user smbclient ldb-tools python3-cryptography && \\
             apt-get install -y pandoc texlive-latex-base texlive-fonts-recommended texlive-fonts-extra texlive-latex-extra && \\
             apt-get clean 
 
@@ -32,8 +33,6 @@ RUN python3 /setup.py && rm /setup.py
 
 RUN apt-get remove -y pandoc texlive-latex-base texlive-fonts-recommended texlive-fonts-extra
 
-# Copia il file di configurazione di Samba nella posizione corretta
-COPY smb.conf /etc/samba/smb.conf
 COPY start.sh /start.sh
 RUN chmod +x start.sh
 
@@ -46,233 +45,42 @@ EXPOSE 139 445
 # Avvia il servizio Samba quando il contenitore viene avviato
 CMD /start.sh"""
 
-base_smb_config_content = """#======================= Global Settings =======================
-
-[global]
-smb encrypt = mandatory
-log level = 3 passdb:5 auth:5
-client min protocol = NT1
-client max protocol = SMB3 
-security = user
-   
-## Browsing/Identification ###
-
-# Change this to the workgroup/NT-domain name your Samba server will part of
-   workgroup = WORKGROUP
-   
-#### Networking ####
-
-# The specific set of interfaces / networks to bind to
-# This can be either the interface name or an IP address/netmask;
-# interface names are normally preferred
-;   interfaces = 127.0.0.0/8 eth0
-
-# Only bind to the named interfaces and/or networks; you must use the
-# 'interfaces' option above to use this.
-# It is recommended that you enable this feature if your Samba machine is
-# not protected by a firewall or is a firewall itself.  However, this
-# option cannot handle dynamic or non-broadcast interfaces correctly.
-;   bind interfaces only = yes
-
-
-
-#### Debugging/Accounting ####
-
-# This tells Samba to use a separate log file for each machine
-# that connects
-   log file = /var/log/samba/log.%m
-
-# Cap the size of the individual log files (in KiB).
-   max log size = 1000
-
-# We want Samba to only log to /var/log/samba/log.{smbd,nmbd}.
-# Append syslog@1 if you want important messages to be sent to syslog too.
-   logging = file
-
-# Do something sensible when Samba crashes: mail the admin a backtrace
-   panic action = /usr/share/samba/panic-action %d
-
-
-####### Authentication #######
-
-# Server role. Defines in which mode Samba will operate. Possible
-# values are "standalone server", "member server", "classic primary
-# domain controller", "classic backup domain controller", "active
-# directory domain controller". 
-#
-# Most people will want "standalone server" or "member server".
-# Running as "active directory domain controller" will require first
-# running "samba-tool domain provision" to wipe databases and create a
-# new domain.
-   server role = standalone server
-
-   obey pam restrictions = yes
-
-# This boolean parameter controls whether Samba attempts to sync the Unix
-# password with the SMB password when the encrypted SMB password in the
-# passdb is changed.
-   unix password sync = yes
-
-# For Unix password sync to work on a Debian GNU/Linux system, the following
-# parameters must be set (thanks to Ian Kahan <<kahan@informatik.tu-muenchen.de> for
-# sending the correct chat script for the passwd program in Debian Sarge).
-   passwd program = /usr/bin/passwd %u
-   passwd chat = *Enter\snew\s*\spassword:* %n\n *Retype\snew\s*\spassword:* %n\n *password\supdated\ssuccessfully* .
-
-# This boolean controls whether PAM will be used for password changes
-# when requested by an SMB client instead of the program listed in
-# 'passwd program'. The default is 'no'.
-   pam password change = yes
-
-# This option controls how unsuccessful authentication attempts are mapped
-# to anonymous connections
-   map to guest = bad user
-
-########## Domains ###########
-
-#
-# The following settings only takes effect if 'server role = classic
-# primary domain controller', 'server role = classic backup domain controller'
-# or 'domain logons' is set 
-#
-
-# It specifies the location of the user's
-# profile directory from the client point of view) The following
-# required a [profiles] share to be setup on the samba server (see
-# below)
-;   logon path = \\%N\profiles\%U
-# Another common choice is storing the profile in the user's home directory
-# (this is Samba's default)
-#   logon path = \\%N\%U\profile
-
-# The following setting only takes effect if 'domain logons' is set
-# It specifies the location of a user's home directory (from the client
-# point of view)
-;   logon drive = H:
-#   logon home = \\%N\%U
-
-# The following setting only takes effect if 'domain logons' is set
-# It specifies the script to run during logon. The script must be stored
-# in the [netlogon] share
-# NOTE: Must be store in 'DOS' file format convention
-;   logon script = logon.cmd
-
-# This allows Unix users to be created on the domain controller via the SAMR
-# RPC pipe.  The example command creates a user account with a disabled Unix
-# password; please adapt to your needs
-; add user script = /usr/sbin/useradd --create-home %u
-
-# This allows machine accounts to be created on the domain controller via the 
-# SAMR RPC pipe.  
-# The following assumes a "machines" group exists on the system
-; add machine script  = /usr/sbin/useradd -g machines -c "%u machine account" -d /var/lib/samba -s /bin/false %u
-
-# This allows Unix groups to be created on the domain controller via the SAMR
-# RPC pipe.  
-; add group script = /usr/sbin/addgroup --force-badname %g
-
-############ Misc ############
-
-# Using the following line enables you to customise your configuration
-# on a per machine basis. The %m gets replaced with the netbios name
-# of the machine that is connecting
-;   include = /home/samba/etc/smb.conf.%m
-
-# Some defaults for winbind (make sure you're not using the ranges
-# for something else.)
-;   idmap config * :              backend = tdb
-;   idmap config * :              range   = 3000-7999
-;   idmap config YOURDOMAINHERE : backend = tdb
-;   idmap config YOURDOMAINHERE : range   = 100000-999999
-;   template shell = /bin/bash
-
-# Setup usershare options to enable non-root users to share folders
-# with the net usershare command.
-
-# Maximum number of usershare. 0 means that usershare is disabled.
-#   usershare max shares = 100
-
-# Allow users who've been granted usershare privileges to create
-# public shares, not just authenticated ones
-   usershare allow guests = yes
-
-#======================= Share Definitions =======================
-
-[homes]
-   comment = Home Directories
-   browseable = no
-
-# By default, the home directories are exported read-only. Change the
-# next parameter to 'no' if you want to be able to write to them.
-   read only = yes
-
-# File creation mask is set to 0700 for security reasons. If you want to
-# create files with group=rw permissions, set next parameter to 0775.
-   create mask = 0700
-
-# Directory creation mask is set to 0700 for security reasons. If you want to
-# create dirs. with group=rw permissions, set next parameter to 0775.
-   directory mask = 0700
-
-# By default, \\server\\username shares can be connected to by anyone
-# with access to the samba server.
-# The following parameter makes sure that only "username" can connect
-# to \\server\\username
-# This might need tweaking when using external authentication schemes
-   valid users = %S
-
-# Un-comment the following and create the netlogon directory for Domain Logons
-# (you need to configure Samba to act as a domain controller too.)
-;[netlogon]
-;   comment = Network Logon Service
-;   path = /home/samba/netlogon
-;   guest ok = yes
-;   read only = yes
-
-# Un-comment the following and create the profiles directory to store
-# users profiles (see the "logon path" option above)
-# (you need to configure Samba to act as a domain controller too.)
-# The path below should be writable by all users so that their
-# profile directory may be created the first time they log on
-;[profiles]
-;   comment = Users profiles
-;   path = /home/samba/profiles
-;   guest ok = no
-;   browseable = no
-;   create mask = 0600
-;   directory mask = 0700
-
-[printers]
-   comment = All Printers
-   browseable = no
-   path = /var/tmp
-   printable = yes
-   guest ok = no
-   read only = yes
-   create mask = 0700
-
-# Windows clients look for this share name as a source of downloadable
-# printer drivers
-[print$]
-   comment = Printer Drivers
-   path = /var/lib/samba/printers
-   browseable = yes
-   read only = yes
-   guest ok = no
-# Uncomment to allow remote administration of Windows print drivers.
-# You may need to replace 'lpadmin' with the name of the group your
-# admin users are members of.
-# Please note that you also need to set appropriate Unix permissions
-# to the drivers directory for these users to have write rights in it
-;   write l"""
-
 base_setup_content = """import subprocess
 import random
 import os
+import time
 from datetime import datetime, timedelta
 
-users = []
+users = [] 
 group_members=[]
+
+def setup_ldap(domain, adminpasswd):
+    config_content = f\"""[libdefaults]
+    default_realm = {domain.upper()}
+    dns_lookup_kdc = true
+    dns_lookup_realm = false
+    \"""
+    with open("/etc/krb5.conf", "w") as krb5_conf:
+            krb5_conf.write(config_content)
+    subprocess.run("rm -f /etc/samba/smb.conf", shell=True, check=True)
+    realm = domain.split(".")[0]
+    subprocess.run(f"samba-tool domain provision --realm={domain.upper()} --domain {realm.upper()} --server-role=dc", shell=True, check=True)
+    subprocess.run(f'samba-tool user setpassword administrator --newpassword={adminpasswd}', shell=True, check=True)
+    subprocess.run('echo "search mydomain.lan\\nnameserver 127.0.0.1\\n" > /etc/resolv.conf', shell=True, check=True)
+    subprocess.run('rm -f /var/lib/samba/private/krb5.conf && ln -s /etc/krb5.conf /var/lib/samba/private/krb5.conf', shell=True, check=True)
+
+def create_user_ldap(username, password):
+    users.append(username)
+    subprocess.run(f'samba-tool user create {username} {password}', shell=True, check=True)
+
+def kinit_user(username,password):
+    subprocess.run('service winbind stop', shell=True, check=True)
+    subprocess.run('service smbd stop', shell=True, check=True)
+    subprocess.run('service nmbd stop', shell=True, check=True)
+    subprocess.run(f'service samba-ad-dc start', shell=True, check=True)
+    time.sleep(2)
+    subprocess.run(f'echo {password} | kinit {username}', shell=True, check=True)
+    subprocess.run('service samba-ad-dc stop', shell=True, check=True)
 
 def generate_random_sentence(num_words):
     words = [
@@ -304,7 +112,7 @@ def generate_random_sentence(num_words):
     'grow', 'expand', 'innovate', 'evolve', 'change', 'transform', 'balance', 'harmony',
     'connect', 'communicate', 'collaborate', 'community', 'together', 'support', 'embrace',
     'kindred', 'soul', 'heart', 'spirit', 'nature', 'semicolon', 'colon'
-]
+    ]
     sentence = ' '.join(random.choice(words) + random.choice(['', ',', ';', ':']) for _ in range(num_words))
     return sentence.capitalize() + '.'
 
@@ -333,7 +141,7 @@ def create_files(dim_min, dim_max, num_file):
         with open(nome_file, "w") as file:
             num_words = random.randint(5, 15)  # Random number of words per sentence
             num_sentences = int((file_dim * 1000000) / (num_words * 5))  # Assuming average word length of 5 characters
-
+    
             for _ in range(num_sentences):
                 sentence = generate_random_sentence(num_words) + '\\n'
                 file.write(sentence)
@@ -344,16 +152,19 @@ def add_member(member):
         group_members.append(member)
     except subprocess.CalledProcessError as e:
         print(f'Errore funzione add_member: {e}')
-    
+
 # create user in the system and add it to samba users
-def create_user(username, password):
+def create_user(username, password,ldap=False):
     try:
         # Creare un nuovo utente
         subprocess.run(['useradd', username], check=True)
-        command = f'(echo "{password}"; echo "{password}")  | smbpasswd -s -a "{username}"'
-        subprocess.run(command, shell=True, check=True)
         command = f'(echo "{password}";echo "{password}") | passwd "{username}"'
         subprocess.run(command, shell=True, check=True)
+        if not ldap:
+            command = f'(echo "{password}"; echo "{password}")  | smbpasswd -s -a "{username}"'
+            subprocess.run(command, shell=True, check=True)
+        else:
+            subprocess.run(f'samba-tool user create {username} {password}', shell=True, check=True)
         print(f'Utente "{username}" created.')
         users.append(username)
     except subprocess.CalledProcessError as e:
@@ -366,19 +177,15 @@ def create_group(group_name, group_members):
         create_and_populate_folder(base_path,group_name)
         subprocess.run(['groupadd', group_name], check=True)
         subprocess.run(['chgrp', group_name,path], check=True)
-        subprocess.run(f"chmod -R 770 {path}",shell=True,check=True)
+        subprocess.run(f"chmod -R 660 {path}",shell=True,check=True)
         for m in group_members:
             subprocess.run(['usermod', '-a', '-G', group_name, m], check=True)
         print(f'Gruppo "{group_name}" created.')
         group_members.clear()
     except subprocess.CalledProcessError as e:
         print(f'Errore durante la creazione del gruppo: {e}')
-        
-def create_ldap_group_folder(group_name):        
-        base_path='/sambashare/'
-        path='/sambashare/'+group_name
-        create_and_populate_folder(base_path,group_name)
-    
+
+
 
 
 def convert_to_word(input_file, output_file):
@@ -395,7 +202,7 @@ def create_and_populate_folder(base_path,folder):
     print(f"Folder '{folder_path}' created successfully.")
     os.chdir(folder_path)
     random_files_number = random.randint(0, 10)
-    create_files(0.0001, 0.1, random_files_number)  # DON'T CHANGE THE DIMENSIONS 
+    create_files(0.0001, 0.1, random_files_number)  # DON'T CHANGE THE DIMENSIONS
     txt_files = [file for file in os.listdir(folder_path)]
     random_number = random.randint(0, len(txt_files))
     txt_files_word = txt_files[:random_number]
@@ -404,7 +211,7 @@ def create_and_populate_folder(base_path,folder):
     for input_file in txt_files_word:
         output_file = os.path.splitext(input_file)[0] + ".docx"
         convert_to_word(input_file, output_file)
-
+    
     for input_file in txt_files_pdf:
         output_file = os.path.splitext(input_file)[0] + ".pdf"
         convert_to_pdf(input_file, output_file)
@@ -412,16 +219,16 @@ def create_and_populate_folder(base_path,folder):
         os.remove(file)
     print(f"{folder_path} populated with files")
     os.chdir(base_path)
-    
-def make_fs(type,ldap_y_n):
+
+def make_fs(type, ldap=False):
     base_path = '/sambashare'
     os.mkdir(base_path)
-    if type == "public" or "both":
+    if type == "public" or type == "both":
         public_folders = ['Public', 'Public/Shared_Documents', 'Public/Shared_Pictures']
         for folder in public_folders:
-           create_and_populate_folder(base_path,folder)
-           subprocess.run(f"chmod -R 777 {base_path}/{folder}",shell=True,check=True)
-    if type == "private" or "both":
+            create_and_populate_folder(base_path, folder)
+            subprocess.run(f"chmod -R 777 {base_path}/{folder}", shell=True, check=True)
+    if type == "private" or type == "both":
         for user in users:
             base_user_path = os.path.join(base_path, user)
             # Specify the user folders
@@ -430,11 +237,14 @@ def make_fs(type,ldap_y_n):
                             'Documents/work/', 'Documents/work/projects', 'Pictures', 'Downloads',
                             'Downloads/important_documents', 'Desktop', 'Desktop/trash', 'Desktop/work']
             for folder in user_folders:
-                create_and_populate_folder(base_user_path,folder)
-            if not ldap_y_n:
-                subprocess.run(f"chown -R {user} {base_user_path}",shell=True,check=True)
-                subprocess.run(f"chgrp -R {user} {base_user_path}",shell=True,check=True)
-                subprocess.run(f"chmod -R 770 {base_user_path}",shell=True,check=True)
+                create_and_populate_folder(base_user_path, folder)
+                if not ldap:
+                    subprocess.run(f"chown -R {user} {base_user_path}", shell=True, check=True)
+                    subprocess.run(f"chgrp -R {user} {base_user_path}", shell=True, check=True)
+                    subprocess.run(f"chmod -R 770 {base_user_path}", shell=True, check=True)
+                else:
+                    subprocess.run(f"chmod -R 777 {base_user_path}", shell=True, check=True)
+
 """
 
 def get_local_ip_address():
@@ -502,66 +312,156 @@ print(""" _____                    _                  _                         
 """)
 print("This script allows you to create an OCI image for a deception component with a SAMBA server.")
 time.sleep(0.5)
-questions = [
-    inquirer.List(
-        "type",
-        message="Choose what type of sharing do you prefer",
-        choices=["Public", "Private", "Both"],
-    ),
-]
-chosen_type = inquirer.prompt(questions)
+######LDAP SECTION
+questions = [inquirer.List("y_n",
+                           message="Do you want LDAP authentication",
+                           choices=["Yes", "No"]), ]
+ldap_y_n = inquirer.prompt(questions)
+if "Yes" in ldap_y_n["y_n"]:
+    while True:
+        questions = [
+            inquirer.Text(
+                "domain",
+                message="Insert the domain [mydomain.lan]:",
+                default= "mydomain.lan"
+            ), inquirer.Password(
+                "password",
+                message="insert the administrator password: "
+            ), inquirer.Password(
+                "password_confirm",
+                message="Confirm password"
+            )
+        ]
+        ldap = inquirer.prompt(questions)
+        domain_pattern = re.compile(r'^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$')
+        if domain_pattern.match(ldap["domain"]):
+            password_pattern = re.compile(r'^(?=.*[A-Z])(?=.*\d).{8,}$')
+            if password_pattern.match(ldap["password"]) and ldap["password"] == ldap["password_confirm"]:
+                break
+            else:
+                print("The password must have one number, one uppercase letter and must be longer than 7 characters, or the passwords doesn't match")
+        else:
+            print("The domain is not in the correct format")
+    base_setup_content += f'setup_ldap("{ldap["domain"]}","{ldap["password"]}")\n'
+    base_start_content=f"""#!/bin/bash
+# Riavvia il servizio smbd
+echo "search {ldap["domain"]}\nnameserver 127.0.0.1\n" > /etc/resolv.conf
+service samba-ad-dc start
+/bin/bash"""
+    questions = [
+        inquirer.List(
+            "type",
+            message="Choose what type of sharing do you prefer",
+            choices=["Public", "Private", "Both"],
+        ),
+    ]
+    chosen_type = inquirer.prompt(questions)
 
-if "Public" in chosen_type["type"]:
-    base_smb_config_content = base_smb_config_content + "\n" + "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nwritable = yes\ncreate mask= 0666\n directory mask = 0777"
-    base_setup_content += 'make_fs("public",False)'
+    if "Public" in chosen_type["type"]:
+        ##TODO anto roba che ha fatto stamattina
+        base_setup_content += ('make_fs("public",True)\n')
 
-elif "Private" in chosen_type["type"]:
-    questions = [inquirer.List("y_n",
-                               message="Do you want LDAP authentication",
-                               choices=["Yes", "No"]), ]
-    ldap_y_n = inquirer.prompt(questions)
-
-    if "Yes" in ldap_y_n["y_n"]:
-        IPserverLdap = input("Insert IP or address of LDAP server (ldap01.example.com): ")
-        workgroup = input("Insert the workgroup: ")
-        suff1 = input(
-            "Insert the first ldap suffix (base for all ldap suffixes and for storing the sambaDomain object): ")
-        suff2 = input(
-            "Insert the second ldap suffix (base for all ldap suffixes and for storing the sambaDomain object): ")
-        questions = [inquirer.List("y_n", message="Do you want to add a ldap admin Distinguished Name (DN)?",
-                                   choices=["Yes", "No"]), ]
-        admin_dn = inquirer.prompt(questions)
-        smb_conf_admin = ""
-        if "Yes" in admin_dn["y_n"]:
-            cn_admin = input("Insert cn: ")
-            dc1_admin = input("Insert first dc: ")
-            dc2_admin = input("Insert second dc: ")
-            smb_conf_admin = smb_conf_admin + "ldap admin dn = " + cn_admin + ",dc=" + dc1_admin + ",dc=" + dc2_admin + "\n"
-        ssl = [inquirer.List("y_n", message="Do you want to use SSL?", choices=["Yes", "No"]), ]
-        ssl = inquirer.prompt(ssl)
-        ssl_conf = ""
-        if "Yes" in ssl["y_n"]:
-            ssl_conf = "ldap ssl = start tls\n"
-        base_smb_config_content = base_smb_config_content[:74] + "\n" + "workgroup = " + workgroup + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=" + suff1 + ",dc=" + suff2 + "\nldap user suffix = ou=mathematicians\nldap group suffix = ou=groups\nldap machine suffix = ou=computers\n" + smb_conf_admin + ssl_conf + base_smb_config_content[74:]
-    if "Yes" in ldap_y_n["y_n"]:
+    elif "Private" in chosen_type["type"]:
         users = []
         try:
-            number_of_user = int(input("How many users need to authenticate within the system using LDAP?"))
+            number_of_user = int(input("how many user do you want create? "))
         except:
             print("you have to insert a integer number")
         for _ in range(number_of_user):
-            questions = [
-                inquirer.Text(
-                    "username",
-                    message="Insert username",
-                ), ]
-            user = inquirer.prompt(questions)
-            base_smb_config_content = base_smb_config_content + "\n" + "[" + user[
-                "username"] + "]" + "\ncomment = private folder\npath = /sambashare/" + user[
-                                          "username"] + "\npublic=no\nguest ok=no\nread only = no\ncreate mask= 0660\n directory mask = 0770\nvalid users = " + user["username"]
-            base_setup_content+= f'users.append("' + user["username"] + '")\n'
-        base_setup_content += 'make_fs("private",True)'
-    if "No" in ldap_y_n["y_n"]:
+            while True:
+                questions = [
+                    inquirer.Text(
+                        "username",
+                        message="Insert username",
+                    ), inquirer.Password(
+                        "password",
+                        message="Insert password"
+                    ), inquirer.Password(
+                        "password_confirm",
+                        message="Confirm password"
+                    )
+                ]
+                user = inquirer.prompt(questions)
+                password_pattern = re.compile(r'^(?=.*[A-Z])(?=.*\d).{8,}$')
+                if password_pattern.match(ldap["password"]) and ldap["password"] == ldap["password_confirm"]:
+                    break
+                else:
+                    print("The password must have one number, one uppercase letter and must be longer than 7 characters, or the passwords doesn't match")
+            users.append(user["username"])
+            base_setup_content += f'create_user("{user["username"]}","{user["password"]}",True)\nkinit_user("{user["username"]}","{user["password"]}")\n'
+            ##TODO roba che ha fatto anto stamattina
+        base_setup_content += 'make_fs("private",True)\n'
+    elif "Both" in chosen_type["type"]:
+        users = []
+       ##TODO PUBLIC FOR ANTO
+        number_of_user = int(input("how many user do you want create? "))
+        for _ in range(number_of_user):
+            while True:
+                questions = [
+                    inquirer.Text(
+                        "username",
+                        message="Insert username",
+                    ), inquirer.Password(
+                        "password",
+                        message="Insert password"
+                    ), inquirer.Password(
+                        "password_confirm",
+                        message="Confirm password"
+                    )
+                ]
+                user = inquirer.prompt(questions)
+                if password_pattern.match(ldap["password"]) and ldap["password"] == ldap["password_confirm"]:
+                    break
+                else:
+                    print("The password must have one number, one uppercase letter and must be longer than 7 characters, or the passwords doesn't match")
+            users.append(user["username"])
+            base_setup_content += f'create_user("{user["username"]}","{user["password"]}",True)\nkinit_user("{user["username"]}","{user["password"]}")'
+            ## TODO anto roba stamattina per condivisione privata
+        base_setup_content += 'make_fs("both",True)\n'
+    if "Both" in chosen_type["type"] or "Private" in chosen_type["type"]:
+        questions=[inquirer.List("y_n",
+                                 message="Do you want create groups",
+                                 choices=["Yes", "No"]),]
+        group_y_n = inquirer.prompt(questions)
+
+        if "Yes" in group_y_n["y_n"]: ##TODO verificare il funzionamento in LDAP
+            try:
+                number_of_groups = int(input("how many groups do you want create? "))
+            except:
+                print("you have to insert a integer number")
+            for _ in range(number_of_groups):
+                group_name = input("insert name of the group (same name as the folder): ")
+                question = [
+                    inquirer.Checkbox(
+                        "users",
+                        message="Choose group's members (use right arrow to select and left to deselect)",
+                        choices=users,
+                    ),
+                ]
+                chosen_users = inquirer.prompt(question)
+                for u in chosen_users["users"]:
+                    base_setup_content += f'\nadd_member("{u}")\n'
+                base_setup_content += f'\ncreate_group("{group_name}","group_members")\n'
+                ##TODO roba di anto per i gruppi
+    base_setup_content += f'kinit_user("administrator","{ldap["password"]}")'
+##### END OF LDAP SECTION
+
+
+if "No" in ldap_y_n["y_n"]:
+    questions = [
+        inquirer.List(
+            "type",
+            message="Choose what type of sharing do you prefer",
+            choices=["Public", "Private", "Both"],
+        ),
+    ]
+    chosen_type = inquirer.prompt(questions)
+
+    if "Public" in chosen_type["type"]:
+        ##TODO roba anto public
+        base_setup_content += ('make_fs("public")')
+
+    elif "Private" in chosen_type["type"]:
         users = []
         try:
             number_of_user = int(input("how many user do you want create? "))
@@ -588,58 +488,12 @@ elif "Private" in chosen_type["type"]:
                     print("PASSWORD DO NOT MATCH")
             users.append(user["username"])
             base_setup_content += f'\ncreate_user("{user["username"]}","{user["password"]}")\n'
-            base_smb_config_content = base_smb_config_content + "\n" + "[" + user["username"] + "]" + "\ncomment = private folder\npath = /sambashare/" + user["username"] + "\npublic=no\nguest ok=no\nread only = no\ncreate mask= 0660\n directory mask = 0770\nvalid users = " + user["username"]
-            base_setup_content += 'make_fs("private",False)'
+            ## TODO roba anto private
+            base_setup_content += 'make_fs("private")'
 
-elif "Both" in chosen_type["type"]:
-    questions = [inquirer.List("y_n",
-                               message="Do you want LDAP authentication",
-                               choices=["Yes", "No"]), ]
-    ldap_y_n = inquirer.prompt(questions)
-
-    if "Yes" in ldap_y_n["y_n"]:
-        IPserverLdap = input("Insert IP or address of LDAP server (ldap01.example.com): ")
-        workgroup = input("Insert the workgroup: ")
-        suff1 = input(
-            "Insert the first ldap suffix (base for all ldap suffixes and for storing the sambaDomain object): ")
-        suff2 = input(
-            "Insert the second ldap suffix (base for all ldap suffixes and for storing the sambaDomain object): ")
-        questions = [inquirer.List("y_n", message="Do you want to add a ldap admin Distinguished Name (DN)?",
-                                   choices=["Yes", "No"]), ]
-        admin_dn = inquirer.prompt(questions)
-        smb_conf_admin = ""
-        if "Yes" in admin_dn["y_n"]:
-            cn_admin = input("Insert cn: ")
-            dc1_admin = input("Insert first dc: ")
-            dc2_admin = input("Insert second dc: ")
-            smb_conf_admin = smb_conf_admin + "ldap admin dn = " + cn_admin + ",dc=" + dc1_admin + ",dc=" + dc2_admin + "\n"
-        ssl = [inquirer.List("y_n", message="Do you want to use SSL?", choices=["Yes", "No"]), ]
-        ssl = inquirer.prompt(ssl)
-        ssl_conf = ""
-        if "Yes" in ssl["y_n"]:
-            ssl_conf = "ldap ssl = start tls\n"
-        base_smb_config_content = base_smb_config_content[
-        :74] + "\n" + "workgroup = " + workgroup + "\n" + "passdb backend = ldapsam:ldap://" + IPserverLdap + "\nldap suffix = dc=" + suff1 + ",dc=" + suff2 + "\nldap user suffix = ou=people\nldap group suffix = ou=groups\nldap machine suffix = ou=computers\n" + smb_conf_admin + ssl_conf +base_smb_config_content[74:]
+    elif "Both" in chosen_type["type"]:
         users = []
-        try:
-            number_of_user = int(input("How many users need to authenticate within the system using LDAP?"))
-        except:
-            print("you have to insert a integer number")
-        for _ in range(number_of_user):
-            questions = [
-                inquirer.Text(
-                    "username",
-                    message="Insert username",
-                ), ]
-            user = inquirer.prompt(questions)
-            base_smb_config_content = base_smb_config_content + "\n" + "[" + user[
-                "username"] + "]" + "\ncomment = private folder\npath = /sambashare/" + user[
-                                          "username"] + "\npublic=no\nguest ok=no\nread only = no\ncreate mask= 0660\n directory mask = 0770\nvalid users = " + user["username"]
-            base_setup_content+= f'users.append("' + user["username"] + '")\n'
-        base_setup_content += 'make_fs("both",True)'
-    if "No" in ldap_y_n["y_n"]:
-        users = []
-        base_smb_config_content = base_smb_config_content + "\n" + "[Public]\ncomment = Public sharing folder\npath = /sambashare/Public\npublic=yes\nbrowsable = yes\nwritable = yes\nread only = no"
+        ##TODO roba anto public
         number_of_user = int(input("how many user do you want create? "))
         for _ in range(number_of_user):
             while True:
@@ -662,46 +516,33 @@ elif "Both" in chosen_type["type"]:
                     print("PASSWORD DO NOT MATCH")
             users.append(user["username"])
             base_setup_content += f'\ncreate_user("{user["username"]}","{user["password"]}")\n'
-            base_smb_config_content = base_smb_config_content + "\n" + "[" + user[
-                "username"] + "]" + "\ncomment = private folder\npath = /sambashare/" + user[
-                                          "username"] + "\npublic=no\nguest ok=no\nread only = no\ncreate mask= 0660\n directory mask = 0770\nvalid users = " + \
-                                      user["username"]
-        base_setup_content += 'make_fs("both",False)'
-if "Both" in chosen_type["type"] or "Private" in chosen_type["type"]:
-    questions=[inquirer.List("y_n",
-            message="Do you want create groups",
-            choices=["Yes", "No"]),]
-    group_y_n = inquirer.prompt(questions)
+           ##TODO roba anto private
+            base_setup_content += 'make_fs("both")'
+    if "Both" in chosen_type["type"] or "Private" in chosen_type["type"]:
+        questions=[inquirer.List("y_n",
+                message="Do you want create groups",
+                choices=["Yes", "No"]),]
+        group_y_n = inquirer.prompt(questions)
 
-    if "Yes" in group_y_n["y_n"] and "No" in ldap_y_n["y_n"]:
-        try:
-            number_of_groups = int(input("how many groups do you want create? "))
-        except:
-            print("you have to insert a integer number")
-        for _ in range(number_of_groups):
-            group_name = input("insert name of the group (same name as the folder): ")
-            question = [
-                inquirer.Checkbox(
-                    "users",
-                    message="Choose group's members (use right arrow to select and left to deselect)",
-                    choices=users,
-                ),
-            ]
-            chosen_users = inquirer.prompt(question)
-            for u in chosen_users["users"]:
-                base_setup_content += f'\nadd_member("{u}")\n'
-            base_setup_content += f'\ncreate_group("{group_name}","group_members")\n'
-            base_smb_config_content = base_smb_config_content + "\n" + "[" + group_name + "]" + "\npath=/sambashare/" + group_name + "\npublic=no\nguest ok=no\nread only=no\nvalid users=@" + group_name
-    if "Yes" in group_y_n["y_n"] and "Yes" in ldap_y_n["y_n"]:
-        try:
-            number_of_groups = int(input("how many groups LDAP?"))
-        except:
-            print("you have to insert a integer number")
-        for _ in range(number_of_groups):
-            group_name = input("insert name of the group (same name as the folder): ")
-            base_setup_content += f'\ncreate_ldap_group_folder("{group_name}")\n'
-            base_smb_config_content = base_smb_config_content + "\n" + "[" + group_name + "]" + "\npath=/sambashare/" + group_name + "\npublic=no\nguest ok=no\nread only=no\nvalid users=@" + group_name
-
+        if "Yes" in group_y_n["y_n"]:
+            try:
+                number_of_groups = int(input("how many groups do you want create? "))
+            except:
+                print("you have to insert a integer number")
+            for _ in range(number_of_groups):
+                group_name = input("insert name of the group (same name as the folder): ")
+                question = [
+                    inquirer.Checkbox(
+                        "users",
+                        message="Choose group's members (use right arrow to select and left to deselect)",
+                        choices=users,
+                    ),
+                ]
+                chosen_users = inquirer.prompt(question)
+                for u in chosen_users["users"]:
+                    base_setup_content += f'\nadd_member("{u}")\n'
+                base_setup_content += f'\ncreate_group("{group_name}","group_members")\n'
+                base_smb_config_content = base_smb_config_content + "\n" + "[" + group_name + "]" + "\npath=/sambashare/" + group_name + "\npublic=no\nguest ok=no\nread only=no\nvalid users=@" + group_name
 if os.path.exists("./image"):
     shutil.rmtree("./image")
 
@@ -714,10 +555,6 @@ with open("image/start.sh", 'w') as file:
 # write the setup file
 with open("image/setup.py", 'w') as file:
     file.write(base_setup_content)
-
-# write smb.conf file
-with open("image/smb.conf", 'w') as file:
-    file.write(base_smb_config_content)
 
 # write the Dockerfile file
 with open("image/Dockerfile", 'w') as file:
