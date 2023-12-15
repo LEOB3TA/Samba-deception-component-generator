@@ -69,9 +69,6 @@ def setup_ldap(domain, adminpasswd):
     subprocess.run('echo "search mydomain.lan\\nnameserver 127.0.0.1\\n" > /etc/resolv.conf', shell=True, check=True)
     subprocess.run('rm -f /var/lib/samba/private/krb5.conf && ln -s /etc/krb5.conf /var/lib/samba/private/krb5.conf', shell=True, check=True)
 
-def create_user_ldap(username, password):
-    users.append(username)
-    subprocess.run(f'samba-tool user create {username} {password}', shell=True, check=True)
 
 def kinit_user(username,password):
     subprocess.run('service winbind stop', shell=True, check=True)
