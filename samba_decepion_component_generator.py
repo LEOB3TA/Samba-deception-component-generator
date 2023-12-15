@@ -174,9 +174,9 @@ def create_group(group_name, group_members):
         create_and_populate_folder(base_path,group_name)
         subprocess.run(['groupadd', group_name], check=True)
         subprocess.run(['chgrp', group_name,path], check=True)
-        subprocess.run(f"chmod -R 660 {path}",shell=True,check=True)
+        subprocess.run(f"chmod -R 770 {path}",shell=True,check=True)
         for m in group_members:
-            subprocess.run(['usermod', '-a', '-G', group_name, m], check=True)
+            subprocess.run(f'usermod -a -G {group_name} {m}',shell=True, check=True)
         print(f'Gruppo "{group_name}" created.')
         group_members.clear()
     except subprocess.CalledProcessError as e:
@@ -396,12 +396,10 @@ service samba-ad-dc start
                     print("The password must have one number, one uppercase letter and must be longer than 7 characters, or the passwords doesn't match")
             users.append(user["username"])
             base_setup_content += f'create_user("{user["username"]}","{user["password"]}",True)\nkinit_user("{user["username"]}","{user["password"]}")\n'
-            ##TODO roba che ha fatto anto stamattina
             base_setup_content += (f'modify_samba_conf("Private","{user["username"]}")\n')
         base_setup_content += 'make_fs("private",True)\n'
     elif "Both" in chosen_type["type"]:
         users = []
-       ##TODO PUBLIC FOR ANTO
         base_setup_content += ('modify_samba_conf("Public","")\n')
         number_of_user = int(input("how many user do you want create? "))
         for _ in range(number_of_user):
@@ -425,7 +423,6 @@ service samba-ad-dc start
                     print("The password must have one number, one uppercase letter and must be longer than 7 characters, or the passwords doesn't match")
             users.append(user["username"])
             base_setup_content += f'create_user("{user["username"]}","{user["password"]}",True)\nkinit_user("{user["username"]}","{user["password"]}")'
-            ## TODO anto roba stamattina per condivisione privata
             base_setup_content += (f'modify_samba_conf("Private","{user["username"]}")\n')
         base_setup_content += 'make_fs("both",True)\n'
     if "Both" in chosen_type["type"] or "Private" in chosen_type["type"]:
@@ -451,8 +448,7 @@ service samba-ad-dc start
                 chosen_users = inquirer.prompt(question)
                 for u in chosen_users["users"]:
                     base_setup_content += f'\nadd_member("{u}")\n'
-                base_setup_content += f'\ncreate_group("{group_name}","group_members")\n'
-                ##TODO roba di anto per i gruppi
+                base_setup_content += f'\ncreate_group("{group_name}",group_members)\n'
                 base_setup_content += (f'modify_samba_conf("Group","{group_name}")\n')
     base_setup_content += f'kinit_user("administrator","{ldap["password"]}")'
 ##### END OF LDAP SECTION
@@ -501,8 +497,8 @@ if "No" in ldap_y_n["y_n"]:
             users.append(user["username"])
             base_setup_content += f'\ncreate_user("{user["username"]}","{user["password"]}")\n'
             ## TODO roba anto private
-            base_setup_content += 'make_fs("private")'
             base_setup_content += (f'modify_samba_conf("Private","{user["username"]}")\n')
+        base_setup_content += 'make_fs("private")\n'
 
     elif "Both" in chosen_type["type"]:
         users = []
@@ -556,7 +552,7 @@ if "No" in ldap_y_n["y_n"]:
                 chosen_users = inquirer.prompt(question)
                 for u in chosen_users["users"]:
                     base_setup_content += f'\nadd_member("{u}")\n'
-                base_setup_content += f'\ncreate_group("{group_name}","group_members")\n'
+                base_setup_content += f'\ncreate_group("{group_name}",group_members)\n'
                 base_setup_content += (f'modify_samba_conf("Group","{group_name}")\n')
                 #base_smb_config_content = base_smb_config_content + "\n" + "[" + group_name + "]" + "\npath=/sambashare/" + group_name + "\npublic=no\nguest ok=no\nread only=no\nvalid users=@" + group_name
 if os.path.exists("./image"):
