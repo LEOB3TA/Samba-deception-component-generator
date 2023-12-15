@@ -242,6 +242,15 @@ def make_fs(type, ldap=False):
                 else:
                     subprocess.run(f"chmod -R 777 {base_user_path}", shell=True, check=True)
 
+def modify_samba_conf(mode,user):
+    with open("/etc/samba/smb.conf", 'a') as file:
+        if mode=="Public":
+            file.write("[Public]\\ncomment = Public sharing folder\\npath = /sambashare/Public\\npublic=yes\\nwritable = yes\\ncreate mask= 0666\\n directory mask = 0777")
+        elif mode=="Private":
+            file.write("\\n[" +user + "]" + "\\ncomment = private folder\\npath = /sambashare/" + user + "\\npublic=no\\nguest ok=no\\nread only = no\\ncreate mask= 0660\\n directory mask = 0770\\nvalid users = " + user)
+        elif mode=="Group":
+            file.write("\\n[" + user + "]" + "\\npath=/sambashare/" + user + "\\npublic=no\\nguest ok=no\\nread only=no\\nvalid users=@" + user)
+
 """
 
 def get_local_ip_address():
@@ -357,6 +366,7 @@ service samba-ad-dc start
     if "Public" in chosen_type["type"]:
         ##TODO anto roba che ha fatto stamattina
         base_setup_content += ('make_fs("public",True)\n')
+        base_setup_content += ('modify_samba_conf("Public","")\n')
 
     elif "Private" in chosen_type["type"]:
         users = []
@@ -387,10 +397,12 @@ service samba-ad-dc start
             users.append(user["username"])
             base_setup_content += f'create_user("{user["username"]}","{user["password"]}",True)\nkinit_user("{user["username"]}","{user["password"]}")\n'
             ##TODO roba che ha fatto anto stamattina
+            base_setup_content += (f'modify_samba_conf("Private","{user["username"]}")\n')
         base_setup_content += 'make_fs("private",True)\n'
     elif "Both" in chosen_type["type"]:
         users = []
        ##TODO PUBLIC FOR ANTO
+        base_setup_content += ('modify_samba_conf("Public","")\n')
         number_of_user = int(input("how many user do you want create? "))
         for _ in range(number_of_user):
             while True:
@@ -414,6 +426,7 @@ service samba-ad-dc start
             users.append(user["username"])
             base_setup_content += f'create_user("{user["username"]}","{user["password"]}",True)\nkinit_user("{user["username"]}","{user["password"]}")'
             ## TODO anto roba stamattina per condivisione privata
+            base_setup_content += (f'modify_samba_conf("Private","{user["username"]}")\n')
         base_setup_content += 'make_fs("both",True)\n'
     if "Both" in chosen_type["type"] or "Private" in chosen_type["type"]:
         questions=[inquirer.List("y_n",
@@ -440,6 +453,7 @@ service samba-ad-dc start
                     base_setup_content += f'\nadd_member("{u}")\n'
                 base_setup_content += f'\ncreate_group("{group_name}","group_members")\n'
                 ##TODO roba di anto per i gruppi
+                base_setup_content += (f'modify_samba_conf("Group","{group_name}")\n')
     base_setup_content += f'kinit_user("administrator","{ldap["password"]}")'
 ##### END OF LDAP SECTION
 
@@ -456,6 +470,7 @@ if "No" in ldap_y_n["y_n"]:
 
     if "Public" in chosen_type["type"]:
         ##TODO roba anto public
+        base_setup_content += (f'modify_samba_conf("Public","")\n')
         base_setup_content += ('make_fs("public")')
 
     elif "Private" in chosen_type["type"]:
@@ -487,10 +502,12 @@ if "No" in ldap_y_n["y_n"]:
             base_setup_content += f'\ncreate_user("{user["username"]}","{user["password"]}")\n'
             ## TODO roba anto private
             base_setup_content += 'make_fs("private")'
+            base_setup_content += (f'modify_samba_conf("Private","{user["username"]}")\n')
 
     elif "Both" in chosen_type["type"]:
         users = []
         ##TODO roba anto public
+        base_setup_content += (f'modify_samba_conf("Public","")\n')
         number_of_user = int(input("how many user do you want create? "))
         for _ in range(number_of_user):
             while True:
@@ -514,7 +531,8 @@ if "No" in ldap_y_n["y_n"]:
             users.append(user["username"])
             base_setup_content += f'\ncreate_user("{user["username"]}","{user["password"]}")\n'
            ##TODO roba anto private
-            base_setup_content += 'make_fs("both")'
+            base_setup_content += (f'modify_samba_conf("Private","{user["username"]}")\n')
+        base_setup_content += 'make_fs("both")'
     if "Both" in chosen_type["type"] or "Private" in chosen_type["type"]:
         questions=[inquirer.List("y_n",
                 message="Do you want create groups",
@@ -539,7 +557,8 @@ if "No" in ldap_y_n["y_n"]:
                 for u in chosen_users["users"]:
                     base_setup_content += f'\nadd_member("{u}")\n'
                 base_setup_content += f'\ncreate_group("{group_name}","group_members")\n'
-                base_smb_config_content = base_smb_config_content + "\n" + "[" + group_name + "]" + "\npath=/sambashare/" + group_name + "\npublic=no\nguest ok=no\nread only=no\nvalid users=@" + group_name
+                base_setup_content += (f'modify_samba_conf("Group","{group_name}")\n')
+                #base_smb_config_content = base_smb_config_content + "\n" + "[" + group_name + "]" + "\npath=/sambashare/" + group_name + "\npublic=no\nguest ok=no\nread only=no\nvalid users=@" + group_name
 if os.path.exists("./image"):
     shutil.rmtree("./image")
 
