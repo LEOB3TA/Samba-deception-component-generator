@@ -34,10 +34,10 @@ The goal of this project is to create a fake samba component, in particular:
   - supports **LDAP** authentication
 
 ## Example
-Below is an example of usage; all generated files are placed within the "example" folder.
----
-https://github.com/LEOB3TA/Samba-deception-component-generator/assets/100613275/8fec59fa-e42b-486c-96ff-c33eb28bb9a8
----
+
+https://github.com/LEOB3TA/Samba-deception-component-generator/assets/100613275/fd494663-d697-44e6-a6b9-f31eabcdea5e
+
+This is an example of usage; all generated files are placed within the "example" folder.
 ## Contribute
 
 We appreciate contributions to enhance this project! Here's how you can get involved:
