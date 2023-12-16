@@ -24,6 +24,18 @@ python3 samba_deception_component_generator.py
 ```
 - The generated files will be created inside **image** folder
 
+ If you didn't build and run docker image via our script:
+
+- build docker image
+```shell
+cd image
+docker build -t image-name .
+```
+- run docker image
+```shell
+docker run -d -p host-ip:host-port:445 -p host-ip:host-port:139 --name container-name image-name
+```
+
 ## Features
 The goal of this project is to create a fake samba component, in particular:
 - The created container contains all the fake data for correct operation
@@ -32,6 +44,9 @@ The goal of this project is to create a fake samba component, in particular:
   - supports **both** **public** and **private** shared
   - automatically generates and populates with **fake files a realistic fs hierarchy**
   - supports **LDAP** authentication
+  - creations of **local users and groups**
+  - build and run **docker image** (**only for standard authentication, not for LDAP**)
+  - delete of the created files
 
 ## Example
 
