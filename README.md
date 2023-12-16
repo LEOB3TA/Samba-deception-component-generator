@@ -4,7 +4,7 @@ This repository is dedicated to a powerful tool designed to enhance network secu
 # Index
 - [Usage](#usage)
 - [Features](#features)
-- [Examples](#examples)
+- [Example](#example)
 - [Contribute](#contribute)
 
 ## Usage
@@ -33,4 +33,17 @@ The goal of this project is to create a fake samba component, in particular:
   - automatically generates and populates with **fake files a realistic fs hierarchy**
   - supports **LDAP** authentication
 
+## Example
+Below is an example of usage; all generated files are placed within the "example" folder.
+---
+https://github.com/LEOB3TA/Samba-deception-component-generator/assets/100613275/8fec59fa-e42b-486c-96ff-c33eb28bb9a8
+---
+## Contribute
+
+We appreciate contributions to enhance this project! Here's how you can get involved:
+- Bug Reports and Features: Open an issue to report bugs or suggest features.
+- Code Contributions:
+        Fork the repo.
+        Create a branch, make changes, and commit.
+        Push to your fork and open a pull request.
 
