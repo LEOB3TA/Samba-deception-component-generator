@@ -23,7 +23,7 @@ FROM ubuntu:20.04
 
 # Aggiorna il repository degli apt e installa Samba
 RUN apt-get update && \\
- apt-get install -y samba winbind libnss-winbind krb5-user smbclient ldb-tools python3-cryptography && \\
+ apt-get install -y samba winbind libnss-winbind krb5-user ldb-tools python3-cryptography && \\
             apt-get install -y pandoc texlive-latex-base texlive-fonts-recommended texlive-fonts-extra texlive-latex-extra && \\
             apt-get clean 
 
