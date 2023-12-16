@@ -53,6 +53,12 @@ The goal of this project is to create a fake samba component, in particular:
 https://github.com/LEOB3TA/Samba-deception-component-generator/assets/100613275/fd494663-d697-44e6-a6b9-f31eabcdea5e
 
 This is an example of usage; all generated files are placed within the "example" folder.
+The users are:
+- *a*, password = *Passw0rd*
+- *l*, password = *Passw0rd*
+- *c*, password = *Passw0rd*
+  
+The group is *cyber*
 ## Contribute
 
 We appreciate contributions to enhance this project! Here's how you can get involved:
