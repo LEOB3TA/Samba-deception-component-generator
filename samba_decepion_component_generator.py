@@ -427,7 +427,7 @@ service samba-ad-dc start
                 else:
                     print("The password must have one number, one uppercase letter and must be longer than 7 characters, or the passwords doesn't match")
             users.append(user["username"])
-            base_setup_content += f'create_user("{user["username"]}","{user["password"]}",True)\nkinit_user("{user["username"]}","{user["password"]}")'
+            base_setup_content += f'create_user("{user["username"]}","{user["password"]}",True)\nkinit_user("{user["username"]}","{user["password"]}")\n'
             base_setup_content += (f'modify_samba_conf("Private","{user["username"]}")\n')
         base_setup_content += 'make_fs("both",True)\n'
     if "Both" in chosen_type["type"] or "Private" in chosen_type["type"]:
@@ -455,7 +455,7 @@ service samba-ad-dc start
                     base_setup_content += f'\nadd_member("{u}")\n'
                 base_setup_content += f'\ncreate_group("{group_name}",group_members,True)\n'
                 base_setup_content += (f'modify_samba_conf("Group","{group_name}")\n')
-    base_setup_content += f'kinit_user("administrator","{ldap["password"]}")'
+    base_setup_content += f'kinit_user("administrator","{ldap["password"]}")\n'
 ##### END OF LDAP SECTION
 
 
@@ -566,51 +566,52 @@ if os.path.exists("./image"):
 os.mkdir("./image")
 
 #write start.sh
-with open("image/start.sh", 'w') as file:
+with open("example/start.sh", 'w') as file:
     file.write(base_start_content)
 
 # write the setup file
-with open("image/setup.py", 'w') as file:
+with open("example/setup.py", 'w') as file:
     file.write(base_setup_content)
 
 # write the Dockerfile file
-with open("image/Dockerfile", 'w') as file:
+with open("example/Dockerfile", 'w') as file:
     file.write(base_dockerfile_content)
 
-questions=[inquirer.List("y_n",
-            message="If you have docker do you want build the image?",
-            choices=["Yes", "No"]),]
-build_y_n = inquirer.prompt(questions)
+if "No" in ldap_y_n["y_n"]:
+    questions=[inquirer.List("y_n",
+                message="If you have docker do you want build the image?",
+                choices=["Yes", "No"]),]
+    build_y_n = inquirer.prompt(questions)
 
-if "Yes" in build_y_n["y_n"]:
-    image_name = input("insert the name of the image: ")
-    docker_build_command = f"docker build -t {image_name} ./image/"
-    # Run the build command using subprocess
-    try:
-        subprocess.run(docker_build_command, shell=True, check=True)
-        print("Docker image built successfully.")
-    except subprocess.CalledProcessError as e:
-        print(f"Error building Docker image: {e}")
-        sys.exit(1)
-    questions = [inquirer.List("y_n",
-                               message="Do you want run the image?",
-                               choices=["Yes", "No"]), ]
-    run_y_n = inquirer.prompt(questions)
-    if "Yes" in run_y_n["y_n"]:
-        port1 = int(input("Choose the actual port to which you want to map the port 139 of the image. "))
-        port2 = int(input("Choose the actual port to which you want to map the port 445 of the image. "))
-        ip_address=get_local_ip_address()
-        if lib_platform.is_platform_windows:
-            docker_run_command = f"START /B docker run -p {ip_address}:{port1}:139 -p {ip_address}:{port2}:445 {image_name}"
-        else:
-            docker_run_command = f"docker run -p {ip_address}:{port1}:139 -p {ip_address}:{port2}:445 {image_name} &"
-        try:
-            subprocess.run(docker_run_command, shell=True, check=True)
-            print("Docker image run successfully.")
-            print(f"\n\nPORT MAPPING: {ip_address}:{port1}-->139\t{ip_address}:{port2}-->445\n\n")
-        except subprocess.CalledProcessError as e:
-            print(f"Error running Docker image: {e}")
-            sys.exit(1)
+    if "Yes" in build_y_n["y_n"]:
+            image_name = input("insert the name of the image: ")
+            docker_build_command = f"docker build -t {image_name} ./image/"
+            # Run the build command using subprocess
+            try:
+                subprocess.run(docker_build_command, shell=True, check=True)
+                print("Docker image built successfully.")
+            except subprocess.CalledProcessError as e:
+                print(f"Error building Docker image: {e}")
+                sys.exit(1)
+            questions = [inquirer.List("y_n",
+                                       message="Do you want run the image?",
+                                       choices=["Yes", "No"]), ]
+            run_y_n = inquirer.prompt(questions)
+            if "Yes" in run_y_n["y_n"]:
+                port1 = int(input("Choose the actual port to which you want to map the port 139 of the image. "))
+                port2 = int(input("Choose the actual port to which you want to map the port 445 of the image. "))
+                ip_address=get_local_ip_address()
+                if lib_platform.is_platform_windows:
+                    docker_run_command = f"START /B docker run -p {ip_address}:{port1}:139 -p {ip_address}:{port2}:445 {image_name}"
+                else:
+                    docker_run_command = f"docker run -p {ip_address}:{port1}:139 -p {ip_address}:{port2}:445 {image_name} &"
+                try:
+                    subprocess.run(docker_run_command, shell=True, check=True)
+                    print("Docker image run successfully.")
+                    print(f"\n\nPORT MAPPING: {ip_address}:{port1}-->139\t{ip_address}:{port2}-->445\n\n")
+                except subprocess.CalledProcessError as e:
+                    print(f"Error running Docker image: {e}")
+                    sys.exit(1)
 
 questions=[inquirer.List("y_n",
             message="Do you want delete all the created files?",
